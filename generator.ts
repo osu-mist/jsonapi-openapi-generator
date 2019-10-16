@@ -1,28 +1,16 @@
-const fsPromises = require('fs').promises;
+import { promises as fsPromises } from 'fs';
 
 import yaml from 'js-yaml';
 
-const openapi: object = {
-  openapi: '3.0.0',
-  info: {
-    description: 'REPLACEME',
-    contact: {
-      name: 'IS Data Architecture Team',
-      url: 'https://is.oregonstate.edu/data-architecture',
-      email: 'isdataarchitecture@oregonstate.edu',
-    },
-  },
-  security: [
-    {
-      OAuth2: [
-        'full',
-      ],
-    },
-  ],
-};
+import { init } from './init';
+
+let openapi: any;
 
 const main = async () => {
   try {
+    const configFile = await fsPromises.open('generator-config.yml', 'r');
+    const config = yaml.safeLoad(await configFile.readFile('utf8'));
+    openapi = init(config);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');
     await openapiFile.write(yaml.safeDump(openapi));
   } catch (err) {
