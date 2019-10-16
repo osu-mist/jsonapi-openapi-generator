@@ -1,0 +1,9 @@
+parser: '@typescript-eslint/parser'
+extends:
+  - airbnb-base
+rules:
+  no-param-reassign: "off"
+  import/prefer-default-export: 'off'
+  import/no-default-export:
+    - error
+  no-unused-expressions: 'off'
