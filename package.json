@@ -4,11 +4,18 @@
   "description": "Generates a JSON:API OpenAPI document",
   "main": "generator.js",
   "scripts": {
+    "start": "tsc && node dist/generator.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "osu-mist",
   "license": "AGPL-3.0",
   "dependencies": {
-    "js-yaml": "^3.13.1"
+    "js-yaml": "^3.13.1",
+    "source-map-support": "^0.5.13"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^3.12.1",
+    "@types/node": "^12.11.1",
+    "typescript": "^3.6.4"
   }
 }
