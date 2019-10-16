@@ -1,0 +1,14 @@
+{
+  "name": "jsonapi-openapi-generator",
+  "version": "1.0.0",
+  "description": "Generates a JSON:API OpenAPI document",
+  "main": "generator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "osu-mist",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "js-yaml": "^3.13.1"
+  }
+}

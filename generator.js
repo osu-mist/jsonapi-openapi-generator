@@ -10,8 +10,8 @@ const testObj = {
 
 const main = async () => {
   try {
-    const openapi = await fsPromises.open('openapi.yaml', 'w');
-    await openapi.write(yaml.safeDump(testObj));
+    const openapiFile = await fsPromises.open('openapi.yaml', 'w');
+    await openapiFile.write(yaml.safeDump(testObj));
   } catch (err) {
     console.error(err);
     process.exit(1);
