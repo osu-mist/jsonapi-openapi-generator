@@ -1,0 +1,71 @@
+title: Express API Skeleton
+version: v1
+githubUrl: https://github.com/osu-mist/express-api-skeleton
+resources:
+  pet:
+    # The plural name of the resource. Default: '{resource}s'
+    plural: pets
+    # Whether the resources should have self links or not. Default: true
+    selfLinks: true
+    # Whether to paginate the get endpoint or not. If resource doesn't have get endpoint, we should
+    # either ignore this value or print a warning/error. Default: false
+    paginate: true
+    # Whether to add an 'include' parameter. Default: false
+    compoundDocuments: false
+    # Whether to add 'fields[resource]' parameter(s) or not. Default: false
+    sparseFieldsets: false
+    # Array of endpoints for this resource. Should only include 'get', 'getById', 'post',
+    # 'patchById', and 'deleteById'. Default: []
+    endpoints:
+      - get
+      - getById
+      - post
+      - patchById
+      - deleteById
+    # Should either be 'all' or an array. If it's an array, we should verify that all items exist in
+    # attributes. Either ignore/warn/error if resource doesn't have a post endpoint. Default: 'all'
+    requiredPostAttributes: all
+    # attributes of the resource. This object should be inserted directly as the resource object's
+    # attributes. Default: {}
+    attributes:
+      name:
+        type: string
+      species:
+        type: string
+      yearsOwned:
+        type: number
+        format: float
+        maximum: 999
+    # type/id and links can be generated if related resources are in the same document. Otherwise,
+    # we may want to just generate some placeholders. Default: {}
+    relationships:
+      owner:
+        # If related resource is in the same document. Verify that this resource exists if true.
+        # Default: true
+        local: true
+        # Either 'toOne' or 'toMany'
+        relationshipType: toOne
+      siblings:
+        local: false
+        relationshipType: toMany
+    # sub-resources. Example: '/pets/{id}/previousOwners' and '/pets/{id}/firstOwner'. Default: {}
+    subResources:
+      # key name will be used as sub-resource path to ensure uniqueness
+      previousOwners:
+        # resource reference. An error should be thrown if resource can't be found in document
+        resource: owner
+        # If true, respond with data array. Otherwise, respond with single data object
+        many: true
+      firstOwner:
+        resource: owner
+        many: false
+  owner:
+    attributes:
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      email:
+        type: string
+      address:
+        type: string
