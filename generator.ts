@@ -5,9 +5,11 @@ import yaml from 'js-yaml';
 
 import { init } from './init';
 
+const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceName);
+
 const buildResources = (config: any, openapi: any) => {
   _.forEach(config.resources, (resource, resourceName) => {
-    const resourceSchemaPrefix: string = _.capitalize(resourceName);
+    const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
     const resourceSchema: any = {
       properties: {
         id: {
@@ -79,6 +81,72 @@ const buildResources = (config: any, openapi: any) => {
   return openapi;
 };
 
+const buildEndpoints = (config: any, openapi: any): any => {
+  const getPath = (method: string, plural: string): string => {
+    if (_.includes(['get', 'post'], method)) {
+      return `/${plural}`;
+    }
+    if (_.includes(['getById', 'patchById', 'deleteById'], method)) {
+      return `/${plural}/{id}`;
+    }
+    throw Error(`Unexpected method ${method}`);
+  };
+
+  const getResponses = (method: string, resourceSchemaPrefix: string): any => {
+    const responses: any = {};
+    if (method === 'deleteById') {
+      responses['204'] = {
+        description: 'REPLACEME',
+      };
+    } else {
+      const schemaSuffix = _.includes(['post', 'getById'], method) ? 'Result' : 'SetResult';
+      const code = method === 'post' ? '201' : '200';
+      responses[code] = {
+        description: 'REPLACEME',
+        content: {
+          'application/json': {
+            schema: {
+              $ref: `#/components/schemas/${resourceSchemaPrefix}${schemaSuffix}`,
+            },
+          },
+        },
+      };
+    }
+
+    responses['500'] = {
+      $ref: '#/components/responses/500',
+    };
+    return responses;
+  };
+
+  _.forEach(config.resources, (resource, resourceName) => {
+    const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
+    _.forEach(resource.endpoints, (method) => {
+      const path = getPath(method, resource.plural);
+      _.set(openapi.paths, [path, method], {
+        summary: 'REPLACEME',
+        tags: [
+          resource.plural,
+        ],
+        description: 'REPLACEME',
+        // TODO Use a valid, unique operationId
+        operationId: 'REPLACEME',
+        parameters: resource.paginate ? [
+          // TODO generate these parameters elsewhere if a paginated resource exists
+          {
+            $ref: '#/components/parameters/pageNumber',
+          },
+          {
+            $ref: '#/components/parameters/pageSize',
+          },
+        ] : [],
+        responses: getResponses(method, resourceSchemaPrefix),
+      });
+    });
+  });
+  return openapi;
+};
+
 const main = async () => {
   try {
     const configFile = await fsPromises.open('generator-config.yml', 'r');
@@ -86,6 +154,7 @@ const main = async () => {
 
     let openapi: any = init(config);
     openapi = buildResources(config, openapi);
+    openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');
     await openapiFile.write(yaml.safeDump(openapi));
   } catch (err) {
