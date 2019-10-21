@@ -29,8 +29,52 @@ const buildResources = (config: any, openapi: any) => {
         $ref: '#/components/schemas/SelfLink',
       };
     }
+    const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
+    openapi.components.schemas[resourceSchemaName] = resourceSchema;
 
-    openapi.components.schemas[`${resourceSchemaPrefix}Resource`] = resourceSchema;
+    const resultSchema: any = {
+      properties: {
+        links: {
+          $ref: '#/components/schemas/SelfLink',
+        },
+        data: {
+          $ref: `#/components/schemas/${resourceSchemaName}`,
+        },
+      },
+    };
+    openapi.components.schemas[`${resourceSchemaPrefix}Result`] = resultSchema;
+
+    const setResultPiece = resource.paginate ? {
+      links: {
+        allOf: [
+          {
+            $ref: '#/components/schemas/SelfLink',
+          },
+          {
+            $ref: '#/components/schemas/PaginationLinks',
+          },
+        ],
+      },
+      meta: {
+        $ref: '#/components/schemas/Meta',
+      },
+    } : {
+      links: {
+        $ref: '#/components/schemas/SelfLink',
+      },
+    };
+    const setResultSchema: any = {
+      properties: {
+        ...setResultPiece,
+        data: {
+          type: 'array',
+          items: {
+            $ref: `#/components/schemas/${resourceSchemaName}`,
+          },
+        },
+      },
+    };
+    openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
   });
   return openapi;
 };
