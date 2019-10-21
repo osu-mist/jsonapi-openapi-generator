@@ -1,56 +1,59 @@
 import _ from 'lodash';
 
+const paginationSchemas = {
+  Meta: {
+    properties: {
+      totalResults: {
+        type: 'integer',
+        description: 'Total number of results',
+        example: 10,
+      },
+      totalPages: {
+        type: 'integer',
+        description: 'Total number of pages',
+        example: 10,
+      },
+      currentPageNumber: {
+        type: 'integer',
+        description: 'Page number of the returned results',
+        example: 1,
+      },
+      currentPageSize: {
+        type: 'integer',
+        description: 'Number of results per page',
+        example: 25,
+      },
+    },
+  },
+  PaginationLinks: {
+    properties: {
+      first: {
+        type: 'string',
+        format: 'uri',
+        description: 'The first page of data',
+      },
+      last: {
+        type: 'string',
+        format: 'uri',
+        description: 'The last page of data',
+      },
+      prev: {
+        type: 'string',
+        format: 'uri',
+        description: 'The previous page of data',
+      },
+      next: {
+        type: 'string',
+        format: 'uri',
+        description: 'The next page of data',
+      },
+    },
+  },
+};
+
 const init = (config: any) => {
-  const paginationSchemas = (_.some(config.resources, (resource) => resource.paginate)) ? {
-    Meta: {
-      properties: {
-        totalResults: {
-          type: 'integer',
-          description: 'Total number of results',
-          example: 10,
-        },
-        totalPages: {
-          type: 'integer',
-          description: 'Total number of pages',
-          example: 10,
-        },
-        currentPageNumber: {
-          type: 'integer',
-          description: 'Page number of the returned results',
-          example: 1,
-        },
-        currentPageSize: {
-          type: 'integer',
-          description: 'Number of results per page',
-          example: 25,
-        },
-      },
-    },
-    PaginationLinks: {
-      properties: {
-        first: {
-          type: 'string',
-          format: 'uri',
-          description: 'The first page of data',
-        },
-        last: {
-          type: 'string',
-          format: 'uri',
-          description: 'The last page of data',
-        },
-        prev: {
-          type: 'string',
-          format: 'uri',
-          description: 'The previous page of data',
-        },
-        next: {
-          type: 'string',
-          format: 'uri',
-          description: 'The next page of data',
-        },
-      },
-    },
-  } : {};
+  const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
+  const extraSchemas = containsPaginated ? paginationSchemas : {};
 
   const openapi = {
     openapi: '3.0.0',
@@ -120,7 +123,7 @@ const init = (config: any) => {
             },
           },
         },
-        ...paginationSchemas,
+        ...extraSchemas,
         ErrorObject: {
           properties: {
             status: {
