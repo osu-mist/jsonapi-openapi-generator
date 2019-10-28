@@ -51,9 +51,36 @@ const paginationSchemas = {
   },
 };
 
+const paginationParameters = {
+  pageNumber: {
+    name: 'page[number]',
+    in: 'query',
+    required: false,
+    description: 'Page number of results',
+    schema: {
+      type: 'integer',
+      minimum: 1,
+      default: 1,
+    },
+  },
+  pageSize: {
+    name: 'page[size]',
+    in: 'query',
+    required: false,
+    description: 'Number of results to return',
+    schema: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 500,
+      default: 25,
+    },
+  },
+};
+
 const init = (config: any) => {
   const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
   const extraSchemas = containsPaginated ? paginationSchemas : {};
+  const extraParameters = containsPaginated ? paginationParameters : {};
 
   const openapi = {
     openapi: '3.0.0',
@@ -100,7 +127,7 @@ const init = (config: any) => {
           },
         },
       },
-      parameters: {},
+      parameters: extraParameters,
       responses: {
         500: {
           description: 'Internal server error',
