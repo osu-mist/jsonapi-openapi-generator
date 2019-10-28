@@ -210,6 +210,19 @@ const buildEndpoints = (config: any, openapi: any): any => {
         parameters: getParameters(endpoint, resource.paginate),
         responses: getResponses(endpoint, resourceSchemaPrefix),
       });
+
+      if (endpoint === 'post') {
+        openapi.paths[path][method].requestBody = {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: `#/components/schemas/${resourceSchemaPrefix}PostBody`,
+              },
+            },
+          },
+        };
+      }
     });
   });
   return openapi;
