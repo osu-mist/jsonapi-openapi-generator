@@ -9,6 +9,15 @@ const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceN
 
 const getEndpointMethod = (endpoint: string): string => endpoint.match(/^[a-z]+/)![0];
 
+const getOperationId = (endpoint: string, resourceName: string, resource: any): string => {
+  if (endpoint === 'get') {
+    return `${endpoint}${_.capitalize(resource.plural)}`;
+  }
+  const words = _.words(endpoint, /(^[a-z]+)|([A-Z][a-z]*)/g);
+  words.splice(1, 0, `${_.capitalize(resourceName)}`);
+  return _.join(words, '');
+};
+
 const buildResources = (config: any, openapi: any) => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
@@ -158,8 +167,7 @@ const buildEndpoints = (config: any, openapi: any): any => {
           resource.plural,
         ],
         description: 'REPLACEME',
-        // TODO Use a valid, unique operationId
-        operationId: 'REPLACEME',
+        operationId: getOperationId(endpoint, resourceName, resource),
         parameters: getParameters(endpoint, resource.paginate),
         responses: getResponses(endpoint, resourceSchemaPrefix),
       });
