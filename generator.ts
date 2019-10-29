@@ -89,43 +89,52 @@ const buildResources = (config: any, openapi: any) => {
     };
     openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
 
-    if (_.includes(resource.endpoints, 'post')) {
-      const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
-      const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
-        $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
-      }));
-      const requiredProperties = resource.requiredPostAttributes === 'all'
-        ? _.keys(resource.attributes)
-        : resource.requiredPostAttributes;
+    const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
+    const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
+      $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
+    }));
+    const requiredProperties = resource.requiredPostAttributes === 'all'
+      ? _.keys(resource.attributes)
+      : resource.requiredPostAttributes;
 
-      const postBodySchema: any = {
-        properties: {
-          data: {
-            type: 'object',
-            properties: {
-              type: {
-                $ref: `${refPropertiesPrefix}/type`,
-              },
-              attributes: {
-                type: 'object',
-                properties: attributeProperties,
-                required: requiredProperties,
-                additionalProperties: false,
-              },
+    const requestBodySchema: any = (post: boolean) => ({
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            type: {
+              $ref: `${refPropertiesPrefix}/type`,
             },
-            required: [
-              'type',
-              'attributes',
-            ],
+            attributes: post ? {
+              type: 'object',
+              properties: attributeProperties,
+              required: requiredProperties,
+              additionalProperties: false,
+            } : {
+              type: 'object',
+              properties: attributeProperties,
+            },
           },
+          required: post ? [
+            'type',
+            'attributes',
+          ] : [
+            'type',
+            'id',
+          ],
         },
-        required: [
-          'data',
-        ],
-        additionalProperties: false,
-      };
+      },
+      required: [
+        'data',
+      ],
+      additionalProperties: false,
+    });
 
-      openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
+    if (_.includes(resource.endpoints, 'post')) {
+      openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = requestBodySchema(true);
+    }
+    if (_.includes(resource.endpoints, 'patchById')) {
+      openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = requestBodySchema(false);
     }
   });
   return openapi;
@@ -211,13 +220,13 @@ const buildEndpoints = (config: any, openapi: any): any => {
         responses: getResponses(endpoint, resourceSchemaPrefix),
       });
 
-      if (endpoint === 'post') {
+      if (_.includes(['post', 'patch'], method)) {
         openapi.paths[path][method].requestBody = {
           required: true,
           content: {
             'application/json': {
               schema: {
-                $ref: `#/components/schemas/${resourceSchemaPrefix}PostBody`,
+                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
               },
             },
           },
