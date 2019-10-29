@@ -77,6 +77,16 @@ const paginationParameters = {
   },
 };
 
+const errorSchema = {
+  content: {
+    'application/json': {
+      schema: {
+        $ref: '#/components/schemas/ErrorResult',
+      },
+    },
+  },
+};
+
 const init = (config: any) => {
   const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
   const extraSchemas = containsPaginated ? paginationSchemas : {};
@@ -129,15 +139,27 @@ const init = (config: any) => {
       },
       parameters: extraParameters,
       responses: {
+        400: {
+          description: 'Bad request',
+          ...errorSchema,
+        },
+        404: {
+          description: 'Resource not found',
+          ...errorSchema,
+        },
+        '409Post': {
+          description:
+            "The request body resource object's type was invalid or, if a client-generated id was used, a resource already exists with this id",
+          ...errorSchema,
+        },
+        '409Patch': {
+          description:
+            'The request body resource object had an invalid type, invalid id, or violated a uniqueness constraint',
+          ...errorSchema,
+        },
         500: {
           description: 'Internal server error',
-          content: {
-            'application/json': {
-              schema: {
-                $ref: '#/components/schemas/ErrorResult',
-              },
-            },
-          },
+          ...errorSchema,
         },
       },
       schemas: {
