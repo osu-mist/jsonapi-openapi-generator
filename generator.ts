@@ -62,13 +62,19 @@ const getPath = (endpoint: string, plural: string): string => {
 };
 
 const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
+  const genericResponse = (code: string) => ({
+    $ref: `#/components/responses/${code}`,
+  });
+
   const responses: any = {};
   if (endpoint === 'deleteById') {
     responses['204'] = {
       description: 'REPLACEME',
     };
   } else {
-    const schemaSuffix = _.includes(['post', 'getById'], endpoint) ? 'Result' : 'SetResult';
+    const schemaSuffix = _.includes(['post', 'patchById', 'getById'], endpoint)
+      ? 'Result'
+      : 'SetResult';
     const code = endpoint === 'post' ? '201' : '200';
     responses[code] = {
       description: 'REPLACEME',
@@ -82,15 +88,27 @@ const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
     };
   }
 
-  responses['500'] = {
-    $ref: '#/components/responses/500',
-  };
+  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+    responses['404'] = genericResponse('404');
+  }
+
+  if (endpoint === 'post') {
+    responses['409'] = {
+      $ref: '#/components/schemas/409Post',
+    };
+  } else if (endpoint === 'patchById') {
+    responses['409'] = {
+      $ref: '#/components/schemas/409Patch',
+    };
+  }
+
+  responses['500'] = genericResponse('500');
   return responses;
 };
 
 const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
   const parameters: Array<any> = [];
-  if (paginate) {
+  if (endpoint === 'get' && paginate) {
     parameters.push(
       {
         $ref: '#/components/parameters/pageNumber',
@@ -121,6 +139,26 @@ const buildEndpoints = (config: any, openapi: any): any => {
     _.forEach(resource.endpoints, (endpoint) => {
       const method = getEndpointMethod(endpoint);
       const path = getPath(endpoint, resource.plural);
+      const parameters = getParameters(endpoint, resource.paginate);
+      const parametersSchema = !_.isEmpty(parameters) ? {
+        parameters: getParameters(endpoint, resource.paginate),
+      } : {};
+
+      let requestBodySchema = {};
+      if (_.includes(['post', 'patch'], method)) {
+        requestBodySchema = {
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
+                },
+              },
+            },
+          },
+        };
+      }
 
       _.set(openapi.paths, [path, method], {
         summary: 'REPLACEME',
@@ -129,22 +167,10 @@ const buildEndpoints = (config: any, openapi: any): any => {
         ],
         description: 'REPLACEME',
         operationId: getOperationId(endpoint, resourceName, resource),
-        parameters: getParameters(endpoint, resource.paginate),
+        ...parametersSchema,
+        ...requestBodySchema,
         responses: getResponses(endpoint, resourceSchemaPrefix),
       });
-
-      if (_.includes(['post', 'patch'], method)) {
-        openapi.paths[path][method].requestBody = {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
-              },
-            },
-          },
-        };
-      }
     });
   });
   return openapi;
@@ -159,7 +185,7 @@ const main = async () => {
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');
-    await openapiFile.write(yaml.safeDump(openapi));
+    await openapiFile.write(yaml.safeDump(openapi, { lineWidth: 100 }));
   } catch (err) {
     console.error(err);
     process.exit(1);
