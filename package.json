@@ -2,13 +2,13 @@
   "name": "jsonapi-openapi-generator",
   "version": "1.0.0",
   "description": "Generates a JSON:API OpenAPI document",
+  "license": "AGPL-3.0",
+  "author": "osu-mist",
   "main": "generator.js",
   "scripts": {
     "start": "tsc && node dist/generator.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "osu-mist",
-  "license": "AGPL-3.0",
   "dependencies": {
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.15",
@@ -24,5 +24,8 @@
     "eslint-config-airbnb": "^18.0.1",
     "eslint-plugin-import": "^2.18.2",
     "typescript": "^3.6.4"
+  },
+  "engines": {
+    "node": "^12.13.0"
   }
 }
