@@ -4,6 +4,13 @@ import _ from 'lodash';
 import yaml from 'js-yaml';
 
 import { init } from './init';
+import {
+  getResourceSchema,
+  getResultSchema,
+  getSetResultSchema,
+  getPostBodySchema,
+  getPatchBodySchema,
+} from './schemas';
 
 const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceName);
 
@@ -21,120 +28,24 @@ const getOperationId = (endpoint: string, resourceName: string, resource: any): 
 const buildResources = (config: any, openapi: any) => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
-    const resourceSchema: any = {
-      properties: {
-        id: {
-          type: 'string',
-          description: `Unique ID of ${resourceName} resource`,
-        },
-        type: {
-          type: 'string',
-          enum: [resourceName],
-        },
-        // TODO add self link
-        attributes: {
-          properties: resource.attributes,
-        },
-      },
-    };
-    if (resource.selfLinks) {
-      resourceSchema.properties.links = {
-        $ref: '#/components/schemas/SelfLink',
-      };
-    }
+
+    const resourceSchema = getResourceSchema(resource, resourceName);
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
     openapi.components.schemas[resourceSchemaName] = resourceSchema;
 
-    const resultSchema: any = {
-      properties: {
-        links: {
-          $ref: '#/components/schemas/SelfLink',
-        },
-        data: {
-          $ref: `#/components/schemas/${resourceSchemaName}`,
-        },
-      },
-    };
+    const resultSchema = getResultSchema(resourceSchemaName);
     openapi.components.schemas[`${resourceSchemaPrefix}Result`] = resultSchema;
 
-    const setResultPiece = resource.paginate ? {
-      links: {
-        allOf: [
-          {
-            $ref: '#/components/schemas/SelfLink',
-          },
-          {
-            $ref: '#/components/schemas/PaginationLinks',
-          },
-        ],
-      },
-      meta: {
-        $ref: '#/components/schemas/Meta',
-      },
-    } : {
-      links: {
-        $ref: '#/components/schemas/SelfLink',
-      },
-    };
-    const setResultSchema: any = {
-      properties: {
-        ...setResultPiece,
-        data: {
-          type: 'array',
-          items: {
-            $ref: `#/components/schemas/${resourceSchemaName}`,
-          },
-        },
-      },
-    };
+    const setResultSchema = getSetResultSchema(resource, resourceSchemaName);
     openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
 
-    const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
-    const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
-      $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
-    }));
-    const requiredProperties = resource.requiredPostAttributes === 'all'
-      ? _.keys(resource.attributes)
-      : resource.requiredPostAttributes;
-
-    const requestBodySchema: any = (post: boolean) => ({
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            type: {
-              $ref: `${refPropertiesPrefix}/type`,
-            },
-            attributes: post ? {
-              type: 'object',
-              properties: attributeProperties,
-              required: requiredProperties,
-              additionalProperties: false,
-            } : {
-              type: 'object',
-              properties: attributeProperties,
-            },
-          },
-          required: post ? [
-            'type',
-            'attributes',
-          ] : [
-            'type',
-            'id',
-          ],
-        },
-      },
-      required: [
-        'data',
-      ],
-      additionalProperties: false,
-    });
-
     if (_.includes(resource.endpoints, 'post')) {
-      openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = requestBodySchema(true);
+      const postBodySchema = getPostBodySchema(resource, resourceSchemaName);
+      openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
     }
     if (_.includes(resource.endpoints, 'patchById')) {
-      openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = requestBodySchema(false);
+      const patchBodySchema = getPatchBodySchema(resource, resourceSchemaName);
+      openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = patchBodySchema;
     }
   });
   return openapi;
