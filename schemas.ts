@@ -1,5 +1,12 @@
 import _ from 'lodash';
 
+/**
+ * Gets the resource schema object for a resource
+ *
+ * @param resource
+ * @param resourceName
+ * @returns The resource schema
+ */
 const getResourceSchema = (resource: any, resourceName: string): any => {
   const resourceSchema: any = {
     properties: {
@@ -24,6 +31,12 @@ const getResourceSchema = (resource: any, resourceName: string): any => {
   return resourceSchema;
 };
 
+/**
+ * Gets the result schema object for a resource
+ *
+ * @param resourceSchemaName
+ * @returns The result schema
+ */
 const getResultSchema = (resourceSchemaName: string) => ({
   properties: {
     links: {
@@ -35,6 +48,13 @@ const getResultSchema = (resourceSchemaName: string) => ({
   },
 });
 
+/**
+ * Gets the setResult schema object for a resource
+ *
+ * @param resource
+ * @param resourceSchemaName
+ * @returns The setResult schema
+ */
 const getSetResultSchema = (resource: any, resourceSchemaName: string) => {
   const linksSchema = resource.paginate ? {
     links: {
@@ -69,6 +89,14 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string) => {
   return setResultSchema;
 };
 
+/**
+ * Gets the requestBody schema object for a resource
+ *
+ * @param resource
+ * @param resourceSchemaName
+ * @param post - true if generating a post request body, false if generating a patch request body
+ * @returns The requestBody schema
+ */
 const getRequestBodySchema = (resource: any, resourceSchemaName: string, post: boolean): any => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
@@ -113,10 +141,24 @@ const getRequestBodySchema = (resource: any, resourceSchemaName: string, post: b
   return requestBodySchema;
 };
 
+/**
+ * Gets the post body schema object for a resource
+ *
+ * @param resource
+ * @param resourceSchemaName
+ * @returns The post body schema
+ */
 const getPostBodySchema = (resource: any, resourceSchemaName: string) => (
   getRequestBodySchema(resource, resourceSchemaName, true)
 );
 
+/**
+ * Gets the patch body schema object for a resource
+ *
+ * @param resource
+ * @param resourceSchemaName
+ * @returns The patch body schema
+ */
 const getPatchBodySchema = (resource: any, resourceSchemaName: string) => (
   getRequestBodySchema(resource, resourceSchemaName, false)
 );

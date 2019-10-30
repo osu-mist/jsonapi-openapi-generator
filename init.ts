@@ -87,6 +87,12 @@ const errorSchema = {
   },
 };
 
+/**
+ * Creates the initial openapi object template
+ *
+ * @param config - The config file object
+ * @returns The updated openapi object
+ */
 const init = (config: any) => {
   const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
   const extraSchemas = containsPaginated ? paginationSchemas : {};
