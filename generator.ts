@@ -12,10 +12,30 @@ import {
   getPatchBodySchema,
 } from './schemas';
 
+/**
+ * Gets the prefix of the resource schema in components/schemas
+ *
+ * @param resourceName
+ * @returns The prefix
+ */
 const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceName);
 
+/**
+ * Gets the method for a given endpoint. Example: `getById` -> `get`
+ *
+ * @param endpoint
+ * @returns The method
+ */
 const getEndpointMethod = (endpoint: string): string => endpoint.match(/^[a-z]+/)![0];
 
+/**
+ * Generates the value for `operationId`
+ *
+ * @param endpoint
+ * @param resourceName
+ * @param resource - The resource object
+ * @returns The value of operationId
+ */
 const getOperationId = (endpoint: string, resourceName: string, resource: any): string => {
   if (endpoint === 'get') {
     return `${endpoint}${_.capitalize(resource.plural)}`;
@@ -25,6 +45,13 @@ const getOperationId = (endpoint: string, resourceName: string, resource: any): 
   return _.join(words, '');
 };
 
+/**
+ * Creates all resource schemas in the openapi object
+ *
+ * @param config - The config file object
+ * @param openapi - The openapi object
+ * @returns The updated openapi object
+ */
 const buildResources = (config: any, openapi: any) => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
@@ -51,6 +78,13 @@ const buildResources = (config: any, openapi: any) => {
   return openapi;
 };
 
+/**
+ * Gets the path for an endpoint
+ *
+ * @param endpoint
+ * @param plural - The value of resource.plural from the config file
+ * @returns The path for the endpoint
+ */
 const getPath = (endpoint: string, plural: string): string => {
   if (_.includes(['get', 'post'], endpoint)) {
     return `/${plural}`;
@@ -61,6 +95,13 @@ const getPath = (endpoint: string, plural: string): string => {
   throw Error(`Unexpected endpoint ${endpoint}`);
 };
 
+/**
+ * Gets responses for an endpoint
+ *
+ * @param endpoint
+ * @param resourceSchemaPrefix - The prefix of the resource schema in the openapi document
+ * @returns The responses object
+ */
 const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
   const genericResponse = (code: string) => ({
     $ref: `#/components/responses/${code}`,
@@ -106,6 +147,13 @@ const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
   return responses;
 };
 
+/**
+ * Return parameters for an endpoint
+ *
+ * @param endpoint
+ * @param paginate - Value of resource.paginate from config file
+ * @returns The list of parameters
+ */
 const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
   const parameters: Array<any> = [];
   if (endpoint === 'get' && paginate) {
@@ -132,6 +180,13 @@ const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
   return parameters;
 };
 
+/**
+ * Creates endpoints
+ *
+ * @param config - The config file object
+ * @param openapi - The openapi object
+ * @returns The modified openapi object
+ */
 const buildEndpoints = (config: any, openapi: any): any => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
@@ -176,6 +231,10 @@ const buildEndpoints = (config: any, openapi: any): any => {
   return openapi;
 };
 
+/**
+ * The main function. Builds an openapi document using a config file and writes the document to a
+ * YAML file
+ */
 const main = async () => {
   try {
     const configFile = await fsPromises.open('generator-config.yml', 'r');
