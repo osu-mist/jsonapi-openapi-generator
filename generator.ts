@@ -94,11 +94,11 @@ const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
 
   if (endpoint === 'post') {
     responses['409'] = {
-      $ref: '#/components/schemas/409Post',
+      $ref: '#/components/responses/409Post',
     };
   } else if (endpoint === 'patchById') {
     responses['409'] = {
-      $ref: '#/components/schemas/409Patch',
+      $ref: '#/components/responses/409Patch',
     };
   }
 
