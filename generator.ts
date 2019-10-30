@@ -51,75 +51,77 @@ const buildResources = (config: any, openapi: any) => {
   return openapi;
 };
 
-const buildEndpoints = (config: any, openapi: any): any => {
-  const getPath = (endpoint: string, plural: string): string => {
-    if (_.includes(['get', 'post'], endpoint)) {
-      return `/${plural}`;
-    }
-    if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
-      return `/${plural}/{id}`;
-    }
-    throw Error(`Unexpected endpoint ${endpoint}`);
-  };
+const getPath = (endpoint: string, plural: string): string => {
+  if (_.includes(['get', 'post'], endpoint)) {
+    return `/${plural}`;
+  }
+  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+    return `/${plural}/{id}`;
+  }
+  throw Error(`Unexpected endpoint ${endpoint}`);
+};
 
-  const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
-    const responses: any = {};
-    if (endpoint === 'deleteById') {
-      responses['204'] = {
-        description: 'REPLACEME',
-      };
-    } else {
-      const schemaSuffix = _.includes(['post', 'getById'], endpoint) ? 'Result' : 'SetResult';
-      const code = endpoint === 'post' ? '201' : '200';
-      responses[code] = {
-        description: 'REPLACEME',
-        content: {
-          'application/json': {
-            schema: {
-              $ref: `#/components/schemas/${resourceSchemaPrefix}${schemaSuffix}`,
-            },
+const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
+  const responses: any = {};
+  if (endpoint === 'deleteById') {
+    responses['204'] = {
+      description: 'REPLACEME',
+    };
+  } else {
+    const schemaSuffix = _.includes(['post', 'getById'], endpoint) ? 'Result' : 'SetResult';
+    const code = endpoint === 'post' ? '201' : '200';
+    responses[code] = {
+      description: 'REPLACEME',
+      content: {
+        'application/json': {
+          schema: {
+            $ref: `#/components/schemas/${resourceSchemaPrefix}${schemaSuffix}`,
           },
         },
-      };
-    }
-
-    responses['500'] = {
-      $ref: '#/components/responses/500',
+      },
     };
-    return responses;
-  };
+  }
 
-  const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
-    const parameters: Array<any> = [];
-    if (paginate) {
-      parameters.push(
-        {
-          $ref: '#/components/parameters/pageNumber',
-        },
-        {
-          $ref: '#/components/parameters/pageSize',
-        },
-      );
-    }
-    if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
-      parameters.push({
-        name: 'id',
-        in: 'path',
-        description: 'REPLACEME',
-        required: true,
-        schema: {
-          type: 'string',
-        },
-      });
-    }
-    return parameters;
+  responses['500'] = {
+    $ref: '#/components/responses/500',
   };
+  return responses;
+};
 
+const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
+  const parameters: Array<any> = [];
+  if (paginate) {
+    parameters.push(
+      {
+        $ref: '#/components/parameters/pageNumber',
+      },
+      {
+        $ref: '#/components/parameters/pageSize',
+      },
+    );
+  }
+  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+    parameters.push({
+      name: 'id',
+      in: 'path',
+      description: 'REPLACEME',
+      required: true,
+      schema: {
+        type: 'string',
+      },
+    });
+  }
+  return parameters;
+};
+
+const buildEndpoints = (config: any, openapi: any): any => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
+
     _.forEach(resource.endpoints, (endpoint) => {
       const method = getEndpointMethod(endpoint);
       const path = getPath(endpoint, resource.plural);
+
       _.set(openapi.paths, [path, method], {
         summary: 'REPLACEME',
         tags: [
