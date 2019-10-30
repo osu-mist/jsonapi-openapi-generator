@@ -237,7 +237,7 @@ const buildEndpoints = (config: any, openapi: any): any => {
  */
 const main = async () => {
   try {
-    const configFile = await fsPromises.open('generator-config.yml', 'r');
+    const configFile = await fsPromises.open('generator-config.yaml', 'r');
     const config = yaml.safeLoad(await configFile.readFile('utf8'));
 
     let openapi: any = init(config);
