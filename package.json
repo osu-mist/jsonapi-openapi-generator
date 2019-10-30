@@ -7,7 +7,8 @@
   "main": "generator.js",
   "scripts": {
     "start": "tsc && node dist/generator.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint *.ts"
   },
   "dependencies": {
     "js-yaml": "^3.13.1",
