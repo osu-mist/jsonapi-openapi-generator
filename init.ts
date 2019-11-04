@@ -106,8 +106,8 @@ const init = (config: any): OpenAPIV3.Document => {
       description: 'REPLACEME',
       version: config.version,
       license: {
-        name: 'REPLACEME',
-        url: 'REPLACEME',
+        name: 'GNU Affero General Public License Version 3',
+        url: 'http://www.gnu.org/licenses/agpl-3.0.en.html',
       },
       contact: {
         name: 'IS Data Architecture Team',
@@ -155,11 +155,11 @@ const init = (config: any): OpenAPIV3.Document => {
           ...errorSchema,
         },
         '409Post': {
-          description: "The request body resource object's type was invalid or, if a client-generated id was used, a resource already exists with this id",
+          description: "The request body resource object's type was invalid or, if a client-generated ID was used, a resource already exists with this id",
           ...errorSchema,
         },
         '409Patch': {
-          description: 'The request body resource object had an invalid type, invalid id, or violated a uniqueness constraint',
+          description: 'The request body resource object had an invalid type, invalid ID, or violated a uniqueness constraint',
           ...errorSchema,
         },
         500: {

@@ -2,14 +2,15 @@ import { promises as fsPromises } from 'fs';
 
 import _ from 'lodash';
 import yaml from 'js-yaml';
+import 'source-map-support/register';
 
 import { init } from './init';
 import {
   getResourceSchema,
   getResultSchema,
   getSetResultSchema,
-  getPostBodySchema,
-  getPatchBodySchema,
+  getRequestBodySchema,
+  RequestBodyType,
 } from './schemas';
 
 /**
@@ -75,11 +76,19 @@ const buildResources = (config: any, openapi: any) => {
     openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
 
     if (_.includes(resource.endpoints, 'post')) {
-      const postBodySchema = getPostBodySchema(resource, resourceSchemaName);
+      const postBodySchema = getRequestBodySchema(
+        resource,
+        resourceSchemaName,
+        RequestBodyType.Post,
+      );
       openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
     }
     if (_.includes(resource.endpoints, 'patchById')) {
-      const patchBodySchema = getPatchBodySchema(resource, resourceSchemaName);
+      const patchBodySchema = getRequestBodySchema(
+        resource,
+        resourceSchemaName,
+        RequestBodyType.Patch,
+      );
       openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = patchBodySchema;
     }
   });

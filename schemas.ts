@@ -1,6 +1,11 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
+enum RequestBodyType {
+  Post = 'post',
+  Patch = 'patch',
+}
+
 /**
  * Gets the resource schema object for a resource
  *
@@ -105,7 +110,7 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV
 const getRequestBodySchema = (
   resource: any,
   resourceSchemaName: string,
-  post: boolean,
+  type: RequestBodyType,
 ): OpenAPIV3.SchemaObject => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
@@ -114,6 +119,42 @@ const getRequestBodySchema = (
   const requiredProperties = resource.requiredPostAttributes === 'all'
     ? _.keys(resource.attributes)
     : resource.requiredPostAttributes;
+
+  let attributes = {};
+  if (type === RequestBodyType.Post) {
+    attributes = {
+      attributes: {
+        type: 'object',
+        properties: attributeProperties,
+        required: requiredProperties,
+        additionalProperties: false,
+      },
+    };
+  } else if (type === RequestBodyType.Patch) {
+    attributes = {
+      attributes: {
+        type: 'object',
+        properties: attributeProperties,
+      },
+    };
+  }
+
+  let required = {};
+  if (type === RequestBodyType.Post) {
+    required = {
+      required: [
+        'type',
+        'attributes',
+      ],
+    };
+  } else if (type === RequestBodyType.Patch) {
+    required = {
+      required: [
+        'type',
+        'id',
+      ],
+    };
+  }
 
   const requestBodySchema: OpenAPIV3.SchemaObject = {
     type: 'object',
@@ -124,23 +165,9 @@ const getRequestBodySchema = (
           type: {
             $ref: `${refPropertiesPrefix}/type`,
           },
-          attributes: post ? {
-            type: 'object',
-            properties: attributeProperties,
-            required: requiredProperties,
-            additionalProperties: false,
-          } : {
-            type: 'object',
-            properties: attributeProperties,
-          },
+          ...attributes,
         },
-        required: post ? [
-          'type',
-          'attributes',
-        ] : [
-          'type',
-          'id',
-        ],
+        ...required,
       },
     },
     required: [
@@ -151,32 +178,10 @@ const getRequestBodySchema = (
   return requestBodySchema;
 };
 
-/**
- * Gets the post body schema object for a resource
- *
- * @param resource
- * @param resourceSchemaName
- * @returns The post body schema
- */
-const getPostBodySchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => (
-  getRequestBodySchema(resource, resourceSchemaName, true)
-);
-
-/**
- * Gets the patch body schema object for a resource
- *
- * @param resource
- * @param resourceSchemaName
- * @returns The patch body schema
- */
-const getPatchBodySchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => (
-  getRequestBodySchema(resource, resourceSchemaName, false)
-);
-
 export {
   getResourceSchema,
   getResultSchema,
   getSetResultSchema,
-  getPostBodySchema,
-  getPatchBodySchema,
+  getRequestBodySchema,
+  RequestBodyType,
 };
