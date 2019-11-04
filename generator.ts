@@ -18,7 +18,7 @@ import {
  * @param resourceName
  * @returns The prefix
  */
-const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceName);
+const getResourceSchemaPrefix = (resourceName: string): string => _.capitalize(resourceName);
 
 /**
  * Gets the method for a given endpoint. Example: `getById` -> `get`

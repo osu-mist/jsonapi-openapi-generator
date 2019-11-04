@@ -2,6 +2,7 @@
   "name": "jsonapi-openapi-generator",
   "version": "1.0.0",
   "description": "Generates a JSON:API OpenAPI document",
+  "repository": "https://github.com/osu-mist/jsonapi-openapi-generator",
   "license": "AGPL-3.0",
   "author": "osu-mist",
   "main": "generator.js",
@@ -13,6 +14,7 @@
   "dependencies": {
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.15",
+    "openapi-types": "^1.3.5",
     "source-map-support": "^0.5.13"
   },
   "devDependencies": {

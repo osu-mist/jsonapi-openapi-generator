@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { OpenAPIV3 } from 'openapi-types';
 
 /**
  * Gets the resource schema object for a resource
@@ -7,8 +8,9 @@ import _ from 'lodash';
  * @param resourceName
  * @returns The resource schema
  */
-const getResourceSchema = (resource: any, resourceName: string): any => {
-  const resourceSchema: any = {
+const getResourceSchema = (resource: any, resourceName: string): OpenAPIV3.SchemaObject => {
+  const resourceSchema: OpenAPIV3.SchemaObject = {
+    type: 'object',
     properties: {
       id: {
         type: 'string',
@@ -19,14 +21,15 @@ const getResourceSchema = (resource: any, resourceName: string): any => {
         enum: [resourceName],
       },
       attributes: {
+        type: 'object',
         properties: resource.attributes,
       },
     },
   };
   if (resource.selfLinks) {
-    resourceSchema.properties.links = {
+    _.set(resourceSchema, 'properties.links', {
       $ref: '#/components/schemas/SelfLink',
-    };
+    });
   }
   return resourceSchema;
 };
@@ -37,7 +40,8 @@ const getResourceSchema = (resource: any, resourceName: string): any => {
  * @param resourceSchemaName
  * @returns The result schema
  */
-const getResultSchema = (resourceSchemaName: string) => ({
+const getResultSchema = (resourceSchemaName: string): OpenAPIV3.SchemaObject => ({
+  type: 'object',
   properties: {
     links: {
       $ref: '#/components/schemas/SelfLink',
@@ -55,8 +59,8 @@ const getResultSchema = (resourceSchemaName: string) => ({
  * @param resourceSchemaName
  * @returns The setResult schema
  */
-const getSetResultSchema = (resource: any, resourceSchemaName: string) => {
-  const linksSchema = resource.paginate ? {
+const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => {
+  const linksSchema: object = resource.paginate ? {
     links: {
       allOf: [
         {
@@ -75,7 +79,8 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string) => {
       $ref: '#/components/schemas/SelfLink',
     },
   };
-  const setResultSchema: any = {
+  const setResultSchema: OpenAPIV3.SchemaObject = {
+    type: 'object',
     properties: {
       ...linksSchema,
       data: {
@@ -97,7 +102,11 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string) => {
  * @param post - true if generating a post request body, false if generating a patch request body
  * @returns The requestBody schema
  */
-const getRequestBodySchema = (resource: any, resourceSchemaName: string, post: boolean): any => {
+const getRequestBodySchema = (
+  resource: any,
+  resourceSchemaName: string,
+  post: boolean,
+): OpenAPIV3.SchemaObject => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
     $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
@@ -106,7 +115,8 @@ const getRequestBodySchema = (resource: any, resourceSchemaName: string, post: b
     ? _.keys(resource.attributes)
     : resource.requiredPostAttributes;
 
-  const requestBodySchema = {
+  const requestBodySchema: OpenAPIV3.SchemaObject = {
+    type: 'object',
     properties: {
       data: {
         type: 'object',
@@ -148,7 +158,7 @@ const getRequestBodySchema = (resource: any, resourceSchemaName: string, post: b
  * @param resourceSchemaName
  * @returns The post body schema
  */
-const getPostBodySchema = (resource: any, resourceSchemaName: string) => (
+const getPostBodySchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => (
   getRequestBodySchema(resource, resourceSchemaName, true)
 );
 
@@ -159,7 +169,7 @@ const getPostBodySchema = (resource: any, resourceSchemaName: string) => (
  * @param resourceSchemaName
  * @returns The patch body schema
  */
-const getPatchBodySchema = (resource: any, resourceSchemaName: string) => (
+const getPatchBodySchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => (
   getRequestBodySchema(resource, resourceSchemaName, false)
 );
 

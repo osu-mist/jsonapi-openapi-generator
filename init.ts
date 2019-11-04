@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { OpenAPIV3 } from 'openapi-types';
 
 const paginationSchemas = {
   Meta: {
@@ -93,12 +94,12 @@ const errorSchema = {
  * @param config - The config file object
  * @returns The updated openapi object
  */
-const init = (config: any) => {
+const init = (config: any): OpenAPIV3.Document => {
   const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
   const extraSchemas = containsPaginated ? paginationSchemas : {};
   const extraParameters = containsPaginated ? paginationParameters : {};
 
-  const openapi = {
+  const openapi: OpenAPIV3.Document = {
     openapi: '3.0.0',
     info: {
       title: config.title,
@@ -154,13 +155,11 @@ const init = (config: any) => {
           ...errorSchema,
         },
         '409Post': {
-          description:
-            "The request body resource object's type was invalid or, if a client-generated id was used, a resource already exists with this id",
+          description: "The request body resource object's type was invalid or, if a client-generated id was used, a resource already exists with this id",
           ...errorSchema,
         },
         '409Patch': {
-          description:
-            'The request body resource object had an invalid type, invalid id, or violated a uniqueness constraint',
+          description: 'The request body resource object had an invalid type, invalid id, or violated a uniqueness constraint',
           ...errorSchema,
         },
         500: {
@@ -170,6 +169,7 @@ const init = (config: any) => {
       },
       schemas: {
         SelfLink: {
+          type: 'object',
           properties: {
             self: {
               type: 'string',
@@ -180,6 +180,7 @@ const init = (config: any) => {
         },
         ...extraSchemas,
         ErrorObject: {
+          type: 'object',
           properties: {
             status: {
               type: 'string',
@@ -198,23 +199,23 @@ const init = (config: any) => {
             },
             detail: {
               type: 'string',
-              description:
-                'A long description of the error that may contain instance-specific details',
+              description: 'A long description of the error that may contain instance-specific details',
             },
             links: {
+              type: 'object',
               properties: {
                 about: {
                   type: 'string',
                   format: 'url',
                   description: 'A link to further information about the error',
-                  example:
-                    'https://developer.oregonstate.edu/documentation/error-reference#1234',
+                  example: 'https://developer.oregonstate.edu/documentation/error-reference#1234',
                 },
               },
             },
           },
         },
         ErrorResult: {
+          type: 'object',
           properties: {
             errors: {
               type: 'array',
