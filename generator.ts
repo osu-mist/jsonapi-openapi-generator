@@ -25,8 +25,16 @@ const getResourceSchemaPrefix = (resourceName: string) => _.capitalize(resourceN
  *
  * @param endpoint
  * @returns The method
+ * @throws Error when endpoint is not in a valid format
  */
-const getEndpointMethod = (endpoint: string): string => endpoint.match(/^[a-z]+/)![0];
+const getEndpointMethod = (endpoint: string): string => {
+  const endpointRegexp = /^[a-z]+/;
+  const match = endpointRegexp.exec(endpoint);
+  if (!match) {
+    throw Error('Invalid endpoint');
+  }
+  return match[0];
+};
 
 /**
  * Generates the value for `operationId`
