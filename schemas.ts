@@ -110,7 +110,7 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV
 const getRequestBodySchema = (
   resource: any,
   resourceSchemaName: string,
-  type: RequestBodyType,
+  bodyType: RequestBodyType,
 ): OpenAPIV3.SchemaObject => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
@@ -121,39 +121,40 @@ const getRequestBodySchema = (
     : resource.requiredPostAttributes;
 
   let attributes = {};
-  if (type === RequestBodyType.Post) {
-    attributes = {
-      attributes: {
-        type: 'object',
-        properties: attributeProperties,
-        required: requiredProperties,
-        additionalProperties: false,
-      },
-    };
-  } else if (type === RequestBodyType.Patch) {
-    attributes = {
-      attributes: {
-        type: 'object',
-        properties: attributeProperties,
-      },
-    };
-  }
-
   let required = {};
-  if (type === RequestBodyType.Post) {
-    required = {
-      required: [
-        'type',
-        'attributes',
-      ],
-    };
-  } else if (type === RequestBodyType.Patch) {
-    required = {
-      required: [
-        'type',
-        'id',
-      ],
-    };
+  switch (bodyType) {
+    case RequestBodyType.Post:
+      attributes = {
+        attributes: {
+          type: 'object',
+          properties: attributeProperties,
+          required: requiredProperties,
+          additionalProperties: false,
+        },
+      };
+      required = {
+        required: [
+          'type',
+          'attributes',
+        ],
+      };
+      break;
+    case RequestBodyType.Patch:
+      attributes = {
+        attributes: {
+          type: 'object',
+          properties: attributeProperties,
+        },
+      };
+      required = {
+        required: [
+          'type',
+          'id',
+        ],
+      };
+      break;
+    default:
+      throw Error('Invalid bodyType');
   }
 
   const requestBodySchema: OpenAPIV3.SchemaObject = {
