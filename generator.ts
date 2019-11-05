@@ -22,34 +22,34 @@ import {
 const getResourceSchemaPrefix = (resourceName: string): string => _.capitalize(resourceName);
 
 /**
- * Gets the method for a given endpoint. Example: `getById` -> `get`
+ * Gets the method for a given operation. Example: `getById` -> `get`
  *
- * @param endpoint
+ * @param operation
  * @returns The method
- * @throws Error when endpoint is not in a valid format
+ * @throws Error when operation is not in a valid format
  */
-const getEndpointMethod = (endpoint: string): string => {
-  const endpointRegexp = /^[a-z]+/;
-  const match = endpointRegexp.exec(endpoint);
+const getOperationMethod = (operation: string): string => {
+  const operationRegex = /^[a-z]+/;
+  const match = operationRegex.exec(operation);
   if (!match) {
-    throw Error('Invalid endpoint');
+    throw Error('Invalid operation');
   }
   return match[0];
 };
 
 /**
- * Generates the value for `operationId`
+ * Generates the value for `operationId`. Example: `getById` -> `getPetById`
  *
- * @param endpoint
+ * @param operation
  * @param resourceName
  * @param resource - The resource object
  * @returns The value of operationId
  */
-const getOperationId = (endpoint: string, resourceName: string, resource: any): string => {
-  if (endpoint === 'get') {
-    return `${endpoint}${_.capitalize(resource.plural)}`;
+const getOperationId = (operation: string, resourceName: string, resource: any): string => {
+  if (operation === 'get') {
+    return `${operation}${_.capitalize(resource.plural)}`;
   }
-  const words = _.words(endpoint, /(^[a-z]+)|([A-Z][a-z]*)/g);
+  const words = _.words(operation, /(^[a-z]+)|([A-Z][a-z]*)/g);
   words.splice(1, 0, `${_.capitalize(resourceName)}`);
   return _.join(words, '');
 };
@@ -75,7 +75,7 @@ const buildResources = (config: any, openapi: any) => {
     const setResultSchema = getSetResultSchema(resource, resourceSchemaName);
     openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
 
-    if (_.includes(resource.endpoints, 'post')) {
+    if (_.includes(resource.operations, 'post')) {
       const postBodySchema = getRequestBodySchema(
         resource,
         resourceSchemaName,
@@ -83,7 +83,7 @@ const buildResources = (config: any, openapi: any) => {
       );
       openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
     }
-    if (_.includes(resource.endpoints, 'patchById')) {
+    if (_.includes(resource.operations, 'patchById')) {
       const patchBodySchema = getRequestBodySchema(
         resource,
         resourceSchemaName,
@@ -96,44 +96,44 @@ const buildResources = (config: any, openapi: any) => {
 };
 
 /**
- * Gets the path for an endpoint
+ * Gets the path for an operation
  *
- * @param endpoint
+ * @param operation
  * @param plural - The value of resource.plural from the config file
- * @returns The path for the endpoint
+ * @returns The path for the operation
  */
-const getPath = (endpoint: string, plural: string): string => {
-  if (_.includes(['get', 'post'], endpoint)) {
+const getPath = (operation: string, plural: string): string => {
+  if (_.includes(['get', 'post'], operation)) {
     return `/${plural}`;
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
     return `/${plural}/{id}`;
   }
-  throw Error(`Unexpected endpoint ${endpoint}`);
+  throw Error(`Unexpected operation ${operation}`);
 };
 
 /**
- * Gets responses for an endpoint
+ * Gets responses for an operation
  *
- * @param endpoint
+ * @param operation
  * @param resourceSchemaPrefix - The prefix of the resource schema in the openapi document
  * @returns The responses object
  */
-const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
+const getResponses = (operation: string, resourceSchemaPrefix: string): any => {
   const genericResponse = (code: string) => ({
     $ref: `#/components/responses/${code}`,
   });
 
   const responses: any = {};
-  if (endpoint === 'deleteById') {
+  if (operation === 'deleteById') {
     responses['204'] = {
       description: 'REPLACEME',
     };
   } else {
-    const schemaSuffix = _.includes(['post', 'patchById', 'getById'], endpoint)
+    const schemaSuffix = _.includes(['post', 'patchById', 'getById'], operation)
       ? 'Result'
       : 'SetResult';
-    const code = endpoint === 'post' ? '201' : '200';
+    const code = operation === 'post' ? '201' : '200';
     responses[code] = {
       description: 'REPLACEME',
       content: {
@@ -146,15 +146,15 @@ const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
     };
   }
 
-  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
     responses['404'] = genericResponse('404');
   }
 
-  if (endpoint === 'post') {
+  if (operation === 'post') {
     responses['409'] = {
       $ref: '#/components/responses/409Post',
     };
-  } else if (endpoint === 'patchById') {
+  } else if (operation === 'patchById') {
     responses['409'] = {
       $ref: '#/components/responses/409Patch',
     };
@@ -165,15 +165,15 @@ const getResponses = (endpoint: string, resourceSchemaPrefix: string): any => {
 };
 
 /**
- * Return parameters for an endpoint
+ * Return parameters for an operation
  *
- * @param endpoint
+ * @param operation
  * @param paginate - Value of resource.paginate from config file
  * @returns The list of parameters
  */
-const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
+const getParameters = (operation: string, paginate: boolean): Array<any> => {
   const parameters: Array<any> = [];
-  if (endpoint === 'get' && paginate) {
+  if (operation === 'get' && paginate) {
     parameters.push(
       {
         $ref: '#/components/parameters/pageNumber',
@@ -183,7 +183,7 @@ const getParameters = (endpoint: string, paginate: boolean): Array<any> => {
       },
     );
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], endpoint)) {
+  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
     parameters.push({
       name: 'id',
       in: 'path',
@@ -208,12 +208,12 @@ const buildEndpoints = (config: any, openapi: any): any => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
-    _.forEach(resource.endpoints, (endpoint) => {
-      const method = getEndpointMethod(endpoint);
-      const path = getPath(endpoint, resource.plural);
-      const parameters = getParameters(endpoint, resource.paginate);
+    _.forEach(resource.operations, (operation) => {
+      const method = getOperationMethod(operation);
+      const path = getPath(operation, resource.plural);
+      const parameters = getParameters(operation, resource.paginate);
       const parametersSchema = !_.isEmpty(parameters) ? {
-        parameters: getParameters(endpoint, resource.paginate),
+        parameters: getParameters(operation, resource.paginate),
       } : {};
 
       let requestBodySchema = {};
@@ -238,10 +238,10 @@ const buildEndpoints = (config: any, openapi: any): any => {
           resource.plural,
         ],
         description: 'REPLACEME',
-        operationId: getOperationId(endpoint, resourceName, resource),
+        operationId: getOperationId(operation, resourceName, resource),
         ...parametersSchema,
         ...requestBodySchema,
-        responses: getResponses(endpoint, resourceSchemaPrefix),
+        responses: getResponses(operation, resourceSchemaPrefix),
       });
     });
   });
