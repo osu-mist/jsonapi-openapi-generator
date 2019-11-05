@@ -10,7 +10,6 @@ import {
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
-  RequestBodyType,
 } from './schemas';
 
 /**
@@ -79,7 +78,7 @@ const buildResources = (config: any, openapi: any) => {
       const postBodySchema = getRequestBodySchema(
         resource,
         resourceSchemaName,
-        RequestBodyType.Post,
+        'post',
       );
       openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
     }
@@ -87,7 +86,7 @@ const buildResources = (config: any, openapi: any) => {
       const patchBodySchema = getRequestBodySchema(
         resource,
         resourceSchemaName,
-        RequestBodyType.Patch,
+        'patch',
       );
       openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = patchBodySchema;
     }

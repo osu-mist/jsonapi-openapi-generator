@@ -1,11 +1,6 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
-enum RequestBodyType {
-  Post = 'post',
-  Patch = 'patch',
-}
-
 /**
  * Gets the resource schema object for a resource
  *
@@ -104,13 +99,13 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV
  *
  * @param resource
  * @param resourceSchemaName
- * @param post - true if generating a post request body, false if generating a patch request body
+ * @param bodyType - 'post' for post body and 'patch' for patch body
  * @returns The requestBody schema
  */
 const getRequestBodySchema = (
   resource: any,
   resourceSchemaName: string,
-  bodyType: RequestBodyType,
+  bodyType: 'post' | 'patch',
 ): OpenAPIV3.SchemaObject => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
@@ -123,7 +118,7 @@ const getRequestBodySchema = (
   let attributes = {};
   let required = {};
   switch (bodyType) {
-    case RequestBodyType.Post:
+    case 'post':
       attributes = {
         attributes: {
           type: 'object',
@@ -139,7 +134,7 @@ const getRequestBodySchema = (
         ],
       };
       break;
-    case RequestBodyType.Patch:
+    case 'patch':
       attributes = {
         attributes: {
           type: 'object',
@@ -184,5 +179,4 @@ export {
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
-  RequestBodyType,
 };
