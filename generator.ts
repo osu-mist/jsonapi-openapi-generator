@@ -51,7 +51,11 @@ const getOperationId = (operation: string, resourceName: string, resource: Resou
     return `${operation}${_.capitalize(resource.plural)}`;
   }
   const words = _.words(operation, /(^[a-z]+)|([A-Z][a-z]*)/g);
-  words.splice(1, 0, `${_.capitalize(resourceName)}`);
+
+  // make sure resource name is in camel case and capitalize first letter
+  let resourcePart = _.camelCase(resourceName);
+  resourcePart = `${resourcePart.charAt(0).toUpperCase()}${resourcePart.slice(1)}`;
+  words.splice(1, 0, resourcePart);
   return _.join(words, '');
 };
 
