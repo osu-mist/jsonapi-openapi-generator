@@ -116,9 +116,9 @@ const getRequestBodySchema = (
   const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
     $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
   }));
-  const requiredProperties = resource.requiredPostAttributes === 'all'
-    ? _.keys(resource.attributes)
-    : resource.requiredPostAttributes;
+  const allPropsRequired = resource.requiredPostAttributes === 'all';
+  const allProperties = _.keys(resource.attributes);
+  const requiredProperties = allPropsRequired ? allProperties : resource.requiredPostAttributes;
 
   let attributes = {};
   let required = {};

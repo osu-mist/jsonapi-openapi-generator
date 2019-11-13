@@ -270,6 +270,7 @@ const loadConfig = async (): Promise<Config> => {
 const main = async (): Promise<void> => {
   try {
     const config = await loadConfig();
+    // TODO handle existing openapi document and avoid overwriting
     let openapi: OpenAPIV3.Document = init(config);
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
