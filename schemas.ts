@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
+import { Resource } from './types';
+
 /**
  * Gets the resource schema object for a resource
  *
@@ -8,7 +10,7 @@ import { OpenAPIV3 } from 'openapi-types';
  * @param resourceName
  * @returns The resource schema
  */
-const getResourceSchema = (resource: any, resourceName: string): OpenAPIV3.SchemaObject => {
+const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
   const resourceSchema: OpenAPIV3.SchemaObject = {
     type: 'object',
     properties: {
@@ -59,7 +61,10 @@ const getResultSchema = (resourceSchemaName: string): OpenAPIV3.SchemaObject => 
  * @param resourceSchemaName
  * @returns The setResult schema
  */
-const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV3.SchemaObject => {
+const getSetResultSchema = (
+  resource: Resource,
+  resourceSchemaName: string,
+): OpenAPIV3.SchemaObject => {
   const linksSchema: object = resource.paginate ? {
     links: {
       allOf: [
@@ -103,7 +108,7 @@ const getSetResultSchema = (resource: any, resourceSchemaName: string): OpenAPIV
  * @returns The requestBody schema
  */
 const getRequestBodySchema = (
-  resource: any,
+  resource: Resource,
   resourceSchemaName: string,
   bodyType: 'post' | 'patch',
 ): OpenAPIV3.SchemaObject => {

@@ -17,7 +17,7 @@ interface SubResource {
   many: boolean;
 }
 
-interface Resource {
+export interface Resource {
   plural: string;
   selfLinks: boolean;
   paginate: boolean;

@@ -2,6 +2,7 @@ import { promises as fsPromises } from 'fs';
 
 import yaml from 'js-yaml';
 import _ from 'lodash';
+import { OpenAPI, OpenAPIV3 } from 'openapi-types';
 import 'source-map-support/register';
 
 import { init } from './init';
@@ -11,7 +12,7 @@ import {
   getSetResultSchema,
   getRequestBodySchema,
 } from './schemas';
-import { Config } from './types';
+import { Config, Resource } from './types';
 
 /**
  * Gets the prefix of the resource schema in components/schemas
@@ -45,7 +46,7 @@ const getOperationMethod = (operation: string): string => {
  * @param resource - The resource object
  * @returns The value of operationId
  */
-const getOperationId = (operation: string, resourceName: string, resource: any): string => {
+const getOperationId = (operation: string, resourceName: string, resource: Resource): string => {
   if (operation === 'get') {
     return `${operation}${_.capitalize(resource.plural)}`;
   }
@@ -61,19 +62,19 @@ const getOperationId = (operation: string, resourceName: string, resource: any):
  * @param openapi - The openapi object
  * @returns The updated openapi object
  */
-const buildResources = (config: Config, openapi: any) => {
+const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.Document => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
     const resourceSchema = getResourceSchema(resource, resourceName);
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
-    openapi.components.schemas[resourceSchemaName] = resourceSchema;
+    _.set(openapi, `components.schemas.${resourceSchemaName}`, resourceSchema);
 
     const resultSchema = getResultSchema(resourceSchemaName);
-    openapi.components.schemas[`${resourceSchemaPrefix}Result`] = resultSchema;
+    _.set(openapi, `components.schemas.${resourceSchemaPrefix}Result`, resultSchema);
 
     const setResultSchema = getSetResultSchema(resource, resourceSchemaName);
-    openapi.components.schemas[`${resourceSchemaPrefix}SetResult`] = setResultSchema;
+    _.set(openapi, `components.schemas.${resourceSchemaPrefix}SetResult`, setResultSchema);
 
     if (_.includes(resource.operations, 'post')) {
       const postBodySchema = getRequestBodySchema(
@@ -81,7 +82,7 @@ const buildResources = (config: Config, openapi: any) => {
         resourceSchemaName,
         'post',
       );
-      openapi.components.schemas[`${resourceSchemaPrefix}PostBody`] = postBodySchema;
+      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PostBody`, postBodySchema);
     }
     if (_.includes(resource.operations, 'patchById')) {
       const patchBodySchema = getRequestBodySchema(
@@ -89,7 +90,7 @@ const buildResources = (config: Config, openapi: any) => {
         resourceSchemaName,
         'patch',
       );
-      openapi.components.schemas[`${resourceSchemaPrefix}PatchBody`] = patchBodySchema;
+      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PatchBody`, patchBodySchema);
     }
   });
   return openapi;
@@ -119,12 +120,15 @@ const getPath = (operation: string, plural: string): string => {
  * @param resourceSchemaPrefix - The prefix of the resource schema in the openapi document
  * @returns The responses object
  */
-const getResponses = (operation: string, resourceSchemaPrefix: string): any => {
-  const genericResponse = (code: string) => ({
+const getResponses = (
+  operation: string,
+  resourceSchemaPrefix: string,
+): OpenAPIV3.ResponsesObject => {
+  const genericResponse = (code: string): OpenAPIV3.ReferenceObject => ({
     $ref: `#/components/responses/${code}`,
   });
 
-  const responses: any = {};
+  const responses: OpenAPIV3.ResponsesObject = {};
   if (operation === 'deleteById') {
     responses['204'] = {
       description: 'REPLACEME',
@@ -171,8 +175,8 @@ const getResponses = (operation: string, resourceSchemaPrefix: string): any => {
  * @param paginate - Value of resource.paginate from config file
  * @returns The list of parameters
  */
-const getParameters = (operation: string, paginate: boolean): Array<any> => {
-  const parameters: Array<any> = [];
+const getParameters = (operation: string, paginate: boolean): OpenAPI.Parameters => {
+  const parameters: OpenAPI.Parameters = [];
   if (operation === 'get' && paginate) {
     parameters.push(
       {
@@ -204,7 +208,7 @@ const getParameters = (operation: string, paginate: boolean): Array<any> => {
  * @param openapi - The openapi object
  * @returns The modified openapi object
  */
-const buildEndpoints = (config: Config, openapi: any): any => {
+const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.Document => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
@@ -262,7 +266,7 @@ const loadConfig = async (): Promise<Config> => {
 const main = async (): Promise<void> => {
   try {
     const config = await loadConfig();
-    let openapi: any = init(config);
+    let openapi: OpenAPIV3.Document = init(config);
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');

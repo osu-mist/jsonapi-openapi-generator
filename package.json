@@ -7,10 +7,14 @@
   "author": "osu-mist",
   "main": "generator.js",
   "scripts": {
+    "lint": "eslint *.ts",
     "start": "tsc && node dist/generator.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint *.ts"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "pre-commit": [
+    "lint",
+    "start"
+  ],
   "dependencies": {
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.15",
@@ -26,6 +30,7 @@
     "eslint": "^6.5.1",
     "eslint-config-airbnb": "^18.0.1",
     "eslint-plugin-import": "^2.18.2",
+    "pre-commit": "^1.2.2",
     "typescript": "^3.7.2"
   },
   "engines": {
