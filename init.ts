@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
+import { Config } from './types';
+
 const paginationSchemas = {
   Meta: {
     properties: {
@@ -94,7 +96,7 @@ const errorSchema = {
  * @param config - The config file object
  * @returns The updated openapi object
  */
-const init = (config: any): OpenAPIV3.Document => {
+const init = (config: Config): OpenAPIV3.Document => {
   const containsPaginated = _.some(config.resources, (resource) => resource.paginate);
   const extraSchemas = containsPaginated ? paginationSchemas : {};
   const extraParameters = containsPaginated ? paginationParameters : {};

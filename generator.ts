@@ -1,7 +1,7 @@
 import { promises as fsPromises } from 'fs';
 
-import _ from 'lodash';
 import yaml from 'js-yaml';
+import _ from 'lodash';
 import 'source-map-support/register';
 
 import { init } from './init';
@@ -11,6 +11,7 @@ import {
   getSetResultSchema,
   getRequestBodySchema,
 } from './schemas';
+import { Config } from './types';
 
 /**
  * Gets the prefix of the resource schema in components/schemas
@@ -60,7 +61,7 @@ const getOperationId = (operation: string, resourceName: string, resource: any):
  * @param openapi - The openapi object
  * @returns The updated openapi object
  */
-const buildResources = (config: any, openapi: any) => {
+const buildResources = (config: Config, openapi: any) => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
@@ -203,7 +204,7 @@ const getParameters = (operation: string, paginate: boolean): Array<any> => {
  * @param openapi - The openapi object
  * @returns The modified openapi object
  */
-const buildEndpoints = (config: any, openapi: any): any => {
+const buildEndpoints = (config: Config, openapi: any): any => {
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
@@ -247,15 +248,20 @@ const buildEndpoints = (config: any, openapi: any): any => {
   return openapi;
 };
 
+const loadConfig = async (): Promise<Config> => {
+  const configFile = await fsPromises.open('generator-config.yaml', 'r');
+  const config: Config = yaml.safeLoad(await configFile.readFile('utf8'));
+  // TODO Assign default values, check schema at runtime
+  return config;
+};
+
 /**
  * The main function. Builds an openapi document using a config file and writes the document to a
  * YAML file
  */
-const main = async () => {
+const main = async (): Promise<void> => {
   try {
-    const configFile = await fsPromises.open('generator-config.yaml', 'r');
-    const config = yaml.safeLoad(await configFile.readFile('utf8'));
-
+    const config = await loadConfig();
     let openapi: any = init(config);
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
