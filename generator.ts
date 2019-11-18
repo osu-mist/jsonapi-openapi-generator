@@ -33,7 +33,7 @@ const getOperationMethod = (operation: string): string => {
   const operationRegex = /^[a-z]+/;
   const match = operationRegex.exec(operation);
   if (!match) {
-    throw Error('Invalid operation');
+    throw Error(`Unexpected operation ${operation}`);
   }
   return match[0];
 };
@@ -47,16 +47,13 @@ const getOperationMethod = (operation: string): string => {
  * @returns The value of operationId
  */
 const getOperationId = (operation: string, resourceName: string, resource: Resource): string => {
-  if (operation === 'get') {
-    return `${operation}${_.capitalize(resource.plural)}`;
-  }
+  const resourcePart = operation === 'get' ? resource.plural : resourceName;
+
+  // split on camelCase words
   const words = _.words(operation, /(^[a-z]+)|([A-Z][a-z]*)/g);
 
-  // make sure resource name is in camel case and capitalize first letter
-  let resourcePart = _.camelCase(resourceName);
-  resourcePart = `${resourcePart.charAt(0).toUpperCase()}${resourcePart.slice(1)}`;
   words.splice(1, 0, resourcePart);
-  return _.join(words, '');
+  return _.camelCase(_.join(words, '-'));
 };
 
 /**

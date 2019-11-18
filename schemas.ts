@@ -154,7 +154,7 @@ const getRequestBodySchema = (
       };
       break;
     default:
-      throw Error('Invalid bodyType');
+      throw Error(`Invalid bodyType ${bodyType}`);
   }
 
   const requestBodySchema: OpenAPIV3.SchemaObject = {
