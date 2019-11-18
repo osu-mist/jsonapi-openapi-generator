@@ -1,4 +1,4 @@
-# JSON:API OpenAPI Generator
+# JSON:API OpenAPI Generator ![node](https://img.shields.io/badge/node-12-brightgreen.svg)
 
 A script for generating an OpenAPI document adhering to the JSON:API specification.
 
