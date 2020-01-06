@@ -7,9 +7,9 @@ type OperationType =
   | 'patchById'
   | 'deleteById';
 
-interface Relationship {
+export interface Relationship {
   relationshipType: 'toOne' | 'toMany';
-  local: boolean;
+  type: string;
 }
 
 interface SubResource {

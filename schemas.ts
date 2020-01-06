@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
-import { Resource } from './types';
+import { Resource, Relationship } from './types';
 
 /**
  * Gets the resource schema object for a resource
@@ -11,6 +11,46 @@ import { Resource } from './types';
  * @returns The resource schema
  */
 const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
+  const getRelationship = (relationship: Relationship): OpenAPIV3.SchemaObject => {
+    const resourceIdentifier: OpenAPIV3.SchemaObject = {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: [relationship.type],
+        },
+        id: {
+          type: 'string',
+        },
+      },
+    };
+    const result: OpenAPIV3.SchemaObject = {
+      type: 'object',
+      properties: {
+        links: {
+          type: 'object',
+          properties: {
+            self: {
+              type: 'string',
+            },
+            related: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    };
+    if (relationship.relationshipType === 'toOne') {
+      _.set(result, 'properties.data', resourceIdentifier);
+    } else {
+      _.set(result, 'properties.data', {
+        type: 'array',
+        items: resourceIdentifier,
+      });
+    }
+    return result;
+  };
+
   const resourceSchema: OpenAPIV3.SchemaObject = {
     type: 'object',
     properties: {
@@ -25,6 +65,10 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
       attributes: {
         type: 'object',
         properties: resource.attributes,
+      },
+      relationships: {
+        type: 'object',
+        properties: _.mapValues(resource.relationships, getRelationship),
       },
     },
   };
