@@ -10,8 +10,15 @@ import { Resource, Relationship } from './types';
  * @param resourceName
  * @returns The resource schema
  */
-const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
-  const getRelationship = (relationship: Relationship): OpenAPIV3.SchemaObject => {
+const getResourceSchema = (
+  resource: Resource,
+  resourceName: string,
+  baseUrl: string,
+): OpenAPIV3.SchemaObject => {
+  const getRelationship = (
+    relationship: Relationship,
+    relationshipName: string,
+  ): OpenAPIV3.SchemaObject => {
     const resourceIdentifier: OpenAPIV3.SchemaObject = {
       type: 'object',
       properties: {
@@ -32,9 +39,11 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
           properties: {
             self: {
               type: 'string',
+              example: `${baseUrl}/${resource.plural}/1/relationships/${relationshipName}`,
             },
             related: {
               type: 'string',
+              example: `${baseUrl}/${resource.plural}/1/${relationshipName}`,
             },
           },
         },

@@ -22,6 +22,8 @@ import { Config, Resource } from './types';
  */
 const getResourceSchemaPrefix = (resourceName: string): string => _.capitalize(resourceName);
 
+let baseUrl: string;
+
 /**
  * Gets the method for a given operation. Example: `getById` -> `get`
  *
@@ -67,7 +69,7 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
-    const resourceSchema = getResourceSchema(resource, resourceName);
+    const resourceSchema = getResourceSchema(resource, resourceName, baseUrl);
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
     _.set(openapi, `components.schemas.${resourceSchemaName}`, resourceSchema);
 
@@ -269,6 +271,7 @@ const main = async (): Promise<void> => {
     const config = await loadConfig();
     // TODO handle existing openapi document and avoid overwriting
     let openapi: OpenAPIV3.Document = init(config);
+    baseUrl = _.get(openapi, 'servers[0].url');
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');
