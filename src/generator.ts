@@ -17,6 +17,12 @@ import { getResourceSchemaPrefix } from './utils';
 
 let baseUrl: string;
 
+const isIdOperation = (operation: string): boolean => _.includes(
+  ['getById', 'patchById', 'deleteById'],
+  operation,
+);
+const idParamName = (resourceName: string): string => `${resourceName}Id`;
+
 /**
  * Gets the method for a given operation. Example: `getById` -> `get`
  *
@@ -103,7 +109,7 @@ const getPath = (operation: string, plural: string): string => {
   if (_.includes(['get', 'post'], operation)) {
     return `/${plural}`;
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
+  if (isIdOperation(operation)) {
     return `/${plural}/{id}`;
   }
   throw Error(`Unexpected operation ${operation}`);
@@ -146,7 +152,7 @@ const getResponses = (
     };
   }
 
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
+  if (isIdOperation(operation)) {
     responses['404'] = genericResponse('404');
   }
 
@@ -168,10 +174,15 @@ const getResponses = (
  * Return parameters for an operation
  *
  * @param operation
+ * @param resourceName
  * @param paginate - Value of resource.paginate from config file
  * @returns The list of parameters
  */
-const getParameters = (operation: string, paginate: boolean): OpenAPI.Parameters => {
+const getParameters = (
+  operation: string,
+  resourceName: string,
+  paginate: boolean,
+): OpenAPI.Parameters => {
   const parameters: OpenAPI.Parameters = [];
   if (operation === 'get' && paginate) {
     parameters.push(
@@ -183,15 +194,9 @@ const getParameters = (operation: string, paginate: boolean): OpenAPI.Parameters
       },
     );
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
+  if (isIdOperation(operation)) {
     parameters.push({
-      name: 'id',
-      in: 'path',
-      description: 'REPLACEME',
-      required: true,
-      schema: {
-        type: 'string',
-      },
+      $ref: `#/components/parameters/${idParamName(resourceName)}`,
     });
   }
   return parameters;
@@ -208,13 +213,24 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
+    // Add id parameter to components.parameters if at least one endpoint uses it
+    if (_.some(resource.operations, (operation) => isIdOperation(operation))) {
+      _.set(openapi, `components.parameters.${idParamName(resourceName)}`, {
+        name: 'id',
+        in: 'path',
+        description: 'REPLACEME',
+        required: true,
+        schema: {
+          type: 'string',
+        },
+      });
+    }
+
     _.forEach(resource.operations, (operation) => {
       const method = getOperationMethod(operation);
       const path = getPath(operation, resource.plural);
-      const parameters = getParameters(operation, resource.paginate);
-      const parametersSchema = !_.isEmpty(parameters) ? {
-        parameters: getParameters(operation, resource.paginate),
-      } : {};
+      const parameters = getParameters(operation, resourceName, resource.paginate);
+      const parametersSchema = !_.isEmpty(parameters) ? { parameters } : {};
 
       let requestBodySchema = {};
       if (_.includes(['post', 'patch'], method)) {

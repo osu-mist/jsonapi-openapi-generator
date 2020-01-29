@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
 import { Relationship, Resource } from './types';
