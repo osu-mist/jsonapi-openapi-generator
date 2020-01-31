@@ -148,6 +148,12 @@ const init = (config: Config): OpenAPIV3.Document => {
       },
       parameters: extraParameters,
       responses: {
+        '204Delete': {
+          description: 'The resource was successfully deleted',
+        },
+        '204RelationshipUpdate': {
+          description: 'The relationship(s) already match the requested state',
+        },
         400: {
           description: 'Bad request',
           ...errorSchema,

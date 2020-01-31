@@ -131,15 +131,13 @@ const getResponses = (
   operation: string,
   resourceSchemaPrefix: string,
 ): OpenAPIV3.ResponsesObject => {
-  const genericResponse = (code: string): OpenAPIV3.ReferenceObject => ({
-    $ref: `#/components/responses/${code}`,
+  const refResponse = (refName: string): OpenAPIV3.ReferenceObject => ({
+    $ref: `#/components/responses/${refName}`,
   });
 
   const responses: OpenAPIV3.ResponsesObject = {};
   if (operation === 'deleteById') {
-    responses['204'] = {
-      description: 'REPLACEME',
-    };
+    responses['204'] = refResponse('204Delete');
   } else {
     const schemaSuffix = _.includes(['post', 'patchById', 'getById'], operation)
       ? 'Result'
@@ -158,7 +156,7 @@ const getResponses = (
   }
 
   if (isIdOperation(operation)) {
-    responses['404'] = genericResponse('404');
+    responses['404'] = refResponse('404');
   }
 
   if (operation === 'post') {
@@ -171,7 +169,7 @@ const getResponses = (
     };
   }
 
-  responses['500'] = genericResponse('500');
+  responses['500'] = refResponse('500');
   return responses;
 };
 
