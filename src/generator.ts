@@ -12,6 +12,11 @@ import {
   getSetResultSchema,
   getRequestBodySchema,
 } from './schemas';
+import {
+  getRelationshipSchema,
+  getRelationshipResultSchema,
+  getRelationshipSetResultSchema,
+} from './relationshipSchemas';
 import { Config, Resource } from './types';
 import { getResourceSchemaPrefix } from './utils';
 
@@ -266,11 +271,62 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       const path = `${getPath('getById', resource.plural)}/relationships/${relationshipName}`;
       const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationshipName)}Relationship`;
       const isToMany = relationship.relationshipType === 'toMany';
+      const relationshipSchemaName = isToMany ? relationshipSchemaPrefix : `${relationshipSchemaPrefix}Set`;
+
+      const relationshipSchema = getRelationshipSchema(relationship);
+      _.set(openapi, `components.schemas.${relationshipSchemaName}`, relationshipSchema);
+
+      if (!isToMany) {
+        const relationshipResultSchema = getRelationshipResultSchema(
+          resource,
+          relationshipName,
+          baseUrl,
+          relationshipSchemaName,
+        );
+        _.set(
+          openapi,
+          `components.schemas.${relationshipSchemaName}Result`,
+          relationshipResultSchema,
+        );
+
+        _.set(openapi, `components.responses.${relationshipSchemaName}`, {
+          description: 'README',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: `#/components/schemas/${relationshipSchemaName}Result`,
+              },
+            },
+          },
+        });
+      } else {
+        const relationshipSetResultSchema = getRelationshipSetResultSchema(
+          resource,
+          relationshipName,
+          baseUrl,
+          relationshipSchemaName,
+        );
+        _.set(
+          openapi,
+          `components.schemas.${relationshipSchemaName}SetResult`,
+          relationshipSetResultSchema,
+        );
+
+        _.set(openapi, `components.responses.${relationshipSchemaName}`, {
+          description: 'README',
+          content: {
+            'application/json': {
+              schema: {
+                $ref: `#/components/schemas/${relationshipSchemaName}SetResult`,
+              },
+            },
+          },
+        });
+      }
 
       const pathsObject = _.reduce(
         ['get', 'patch', ...(isToMany ? ['post', 'delete'] : [])],
         (result: OpenAPIV3.PathsObject, method: string) => {
-          const schemaName = isToMany ? relationshipSchemaPrefix : `${relationshipSchemaPrefix}Set`;
           const isUpdate = _.includes(['patch', 'post', 'delete'], method);
 
           const operationObject: OpenAPIV3.OperationObject = {
@@ -288,13 +344,13 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
           if (isUpdate) {
             operationObject.requestBody = {
-              $ref: `#/components/requestBodies/${schemaName}`,
+              $ref: `#/components/requestBodies/${relationshipSchemaName}`,
             };
           }
 
           operationObject.responses = {
             200: {
-              $ref: `#/components/responses/${schemaName}`,
+              $ref: `#/components/responses/${relationshipSchemaName}`,
             },
             ...(isUpdate && {
               204: {
