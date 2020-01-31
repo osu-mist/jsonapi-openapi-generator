@@ -260,6 +260,62 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
         responses: getResponses(operation, resourceSchemaPrefix),
       });
     });
+
+    // add relationship endpoints
+    _.forEach(resource.relationships, (relationship, relationshipName) => {
+      const path = `${getPath('getById', resource.plural)}/relationships/${relationshipName}`;
+      const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationshipName)}Relationship`;
+      const isToMany = relationship.relationshipType === 'toMany';
+
+      const pathsObject = _.reduce(
+        ['get', 'patch', ...(isToMany ? ['post', 'delete'] : [])],
+        (result: OpenAPIV3.PathsObject, method: string) => {
+          const schemaName = isToMany ? relationshipSchemaPrefix : `${relationshipSchemaPrefix}Set`;
+          const isUpdate = _.includes(['patch', 'post', 'delete'], method);
+
+          const operationObject: OpenAPIV3.OperationObject = {
+            description: 'REPLACEME',
+            tags: [
+              resourceName,
+              relationshipName,
+            ],
+            parameters: [
+              {
+                $ref: `#/components/parameters/${idParamName(resourceName)}`,
+              },
+            ],
+          };
+
+          if (isUpdate) {
+            operationObject.requestBody = {
+              $ref: `#/components/requestBodies/${schemaName}`,
+            };
+          }
+
+          operationObject.responses = {
+            200: {
+              $ref: `#/components/responses/${schemaName}`,
+            },
+            ...(isUpdate && {
+              204: {
+                $ref: '#/components/responses/204RelationshipUpdate',
+              },
+            }),
+            404: {
+              $ref: '#/components/responses/404',
+            },
+            500: {
+              $ref: '#/components/responses/500',
+            },
+          };
+
+          result[method] = operationObject;
+          return result;
+        },
+        {},
+      );
+      openapi.paths[path] = pathsObject;
+    });
   });
   return openapi;
 };
