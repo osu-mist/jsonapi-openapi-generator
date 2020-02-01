@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
 import { Resource, Relationship } from './types';
+import { getResourceSchemaPrefix } from './utils';
 
 /**
  * Gets the resource schema object for a resource
@@ -13,51 +14,17 @@ import { Resource, Relationship } from './types';
 const getResourceSchema = (
   resource: Resource,
   resourceName: string,
-  baseUrl: string,
 ): OpenAPIV3.SchemaObject => {
   const getRelationship = (
     relationship: Relationship,
-    relationshipName: string,
-  ): OpenAPIV3.SchemaObject => {
-    const resourceIdentifier: OpenAPIV3.SchemaObject = {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: [relationship.type],
-        },
-        id: {
-          type: 'string',
-        },
-      },
+  ): OpenAPIV3.ReferenceObject => {
+    let schemaName = _([resourceName, relationship.type]).map(getResourceSchemaPrefix).join('');
+    schemaName = relationship.relationshipType === 'toOne'
+      ? `${schemaName}RelationshipResult`
+      : `${schemaName}RelationshipSetResult`;
+    return {
+      $ref: `#/components/schemas/${schemaName}`,
     };
-    const result: OpenAPIV3.SchemaObject = {
-      type: 'object',
-      properties: {
-        links: {
-          type: 'object',
-          properties: {
-            self: {
-              type: 'string',
-              example: `${baseUrl}/${resource.plural}/1/relationships/${relationshipName}`,
-            },
-            related: {
-              type: 'string',
-              example: `${baseUrl}/${resource.plural}/1/${relationshipName}`,
-            },
-          },
-        },
-      },
-    };
-    if (relationship.relationshipType === 'toOne') {
-      _.set(result, 'properties.data', resourceIdentifier);
-    } else {
-      _.set(result, 'properties.data', {
-        type: 'array',
-        items: resourceIdentifier,
-      });
-    }
-    return result;
   };
 
   const resourceSchema: OpenAPIV3.SchemaObject = {

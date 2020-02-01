@@ -73,7 +73,7 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
-    const resourceSchema = getResourceSchema(resource, resourceName, baseUrl);
+    const resourceSchema = getResourceSchema(resource, resourceName);
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
     _.set(openapi, `components.schemas.${resourceSchemaName}`, resourceSchema);
 
@@ -267,13 +267,15 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
     // add relationship endpoints
     _.forEach(resource.relationships, (relationship, relationshipName) => {
       const path = `${getPath('getById', resource.plural)}/relationships/${relationshipName}`;
-      const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationshipName)}Relationship`;
+      const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationship.type)}Relationship`;
       const isToMany = relationship.relationshipType === 'toMany';
       const relationshipSchemaName = isToMany ? `${relationshipSchemaPrefix}Set` : relationshipSchemaPrefix;
       const relationshipResponseSchemaName = `${relationshipSchemaName}Result`;
 
       const relationshipSchema = getRelationshipSchema(relationship);
-      _.set(openapi, `components.schemas.${relationshipSchemaName}`, relationshipSchema);
+      if (!_.has(openapi, `components.schemas.${relationshipSchemaPrefix}`)) {
+        _.set(openapi, `components.schemas.${relationshipSchemaPrefix}`, relationshipSchema);
+      }
 
       const getResponseSchema = isToMany
         ? getRelationshipSetResultSchema
@@ -283,7 +285,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
         resource,
         relationshipName,
         baseUrl,
-        relationshipSchemaName,
+        relationshipSchemaPrefix,
       );
 
       _.set(openapi, `components.schemas.${relationshipResponseSchemaName}`, responseSchema);
@@ -300,7 +302,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       });
 
       const relationshipSchemaRef = {
-        $ref: `#/components/schemas/${relationshipSchemaName}`,
+        $ref: `#/components/schemas/${relationshipSchemaPrefix}`,
       };
 
       const relationshipRequestBody = {
@@ -339,8 +341,8 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
           const operationObject: OpenAPIV3.OperationObject = {
             description: 'REPLACEME',
             tags: [
-              resourceName,
-              relationshipName,
+              resource.plural,
+              _.get(config, `resources.${relationship.type}.plural`, `<plural of ${relationship.type}>`),
             ],
             parameters: [
               {
