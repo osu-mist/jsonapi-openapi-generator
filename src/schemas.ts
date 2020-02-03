@@ -42,12 +42,14 @@ const getResourceSchema = (
         type: 'object',
         properties: resource.attributes,
       },
-      relationships: {
-        type: 'object',
-        properties: _.mapValues(resource.relationships, getRelationship),
-      },
     },
   };
+  if (resource.relationships) {
+    _.set(resourceSchema, 'properties.relationships', {
+      type: 'object',
+      properties: _.mapValues(resource.relationships, getRelationship),
+    });
+  }
   if (resource.selfLinks) {
     _.set(resourceSchema, 'properties.links', {
       $ref: '#/components/schemas/SelfLink',
