@@ -11,7 +11,7 @@ import {
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
-} from './schemas';
+} from './resourceSchemas';
 import {
   getRelationshipSchema,
   getRelationshipResultSchema,
