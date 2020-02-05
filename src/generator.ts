@@ -235,21 +235,18 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       const parameters = getParameters(operation, resourceName, resource.paginate);
       const parametersSchema = !_.isEmpty(parameters) ? { parameters } : {};
 
-      let requestBodySchema = {};
-      if (_.includes(['post', 'patch'], method)) {
-        requestBodySchema = {
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
-                },
+      const requestBodySchema = _.includes(['post', 'patch'], method) ? {
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
               },
             },
           },
-        };
-      }
+        },
+      } : {};
 
       _.set(openapi.paths, [path, method], {
         summary: 'REPLACEME',

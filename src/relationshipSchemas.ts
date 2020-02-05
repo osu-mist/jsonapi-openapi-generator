@@ -3,9 +3,7 @@ import { OpenAPIV3 } from 'openapi-types';
 import { Relationship, Resource } from './types';
 import { getResourceSchemaPrefix } from './utils';
 
-const getRelationshipSchema = (
-  relationship: Relationship,
-): OpenAPIV3.SchemaObject => {
+const getRelationshipSchema = (relationship: Relationship): OpenAPIV3.SchemaObject => {
   const relationshipSchemaName = getResourceSchemaPrefix(relationship.type);
   return {
     type: 'object',
