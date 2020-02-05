@@ -248,6 +248,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
         },
       } : {};
 
+      // add resource endpoints
       _.set(openapi.paths, [path, method], {
         summary: 'REPLACEME',
         tags: [
@@ -277,7 +278,6 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       const getResponseSchema = isToMany
         ? getRelationshipSetResultSchema
         : getRelationshipResultSchema;
-
       const responseSchema = getResponseSchema(
         resource,
         relationshipName,
@@ -301,7 +301,19 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       const relationshipSchemaRef = {
         $ref: `#/components/schemas/${relationshipSchemaPrefix}`,
       };
-
+      const arrayData = {
+        type: 'array',
+        items: relationshipSchemaRef,
+      };
+      const singleData = {
+        type: 'object',
+        allOf: [
+          {
+            nullable: true,
+          },
+          relationshipSchemaRef,
+        ],
+      };
       const relationshipRequestBody = {
         content: {
           'application/json': {
@@ -311,23 +323,13 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
                 'data',
               ],
               properties: {
-                data: isToMany ? {
-                  type: 'array',
-                  items: relationshipSchemaRef,
-                } : {
-                  type: 'object',
-                  allOf: [
-                    {
-                      nullable: true,
-                    },
-                    relationshipSchemaRef,
-                  ],
-                },
+                data: isToMany ? arrayData : singleData,
               },
             },
           },
         },
       };
+
       _.set(openapi, `components.requestBodies.${relationshipSchemaName}`, relationshipRequestBody);
 
       const pathsObject = _.reduce(
@@ -339,7 +341,11 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
             description: 'REPLACEME',
             tags: [
               resource.plural,
-              _.get(config, `resources.${relationship.type}.plural`, `<plural of ${relationship.type}>`),
+              _.get(
+                config,
+                `resources.${relationship.type}.plural`,
+                `<plural of ${relationship.type}>`,
+              ),
             ],
             parameters: [
               {
@@ -358,11 +364,11 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
             200: {
               $ref: `#/components/responses/${relationshipSchemaName}`,
             },
-            ...(isUpdate && {
+            ...(isUpdate ? {
               204: {
                 $ref: '#/components/responses/204RelationshipUpdate',
               },
-            }),
+            } : {}),
             404: {
               $ref: '#/components/responses/404',
             },
