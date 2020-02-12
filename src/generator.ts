@@ -333,6 +333,10 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       _.set(openapi, `components.requestBodies.${relationshipSchemaName}`, relationshipRequestBody);
 
       const pathsObject = _.reduce(
+        /*
+         * this array should be ['get', 'patch'] if the relationship is toOne and
+         * ['get', 'patch', 'post', 'delete'] if the relationship is toMany
+         */
         ['get', 'patch', ...(isToMany ? ['post', 'delete'] : [])],
         (result: OpenAPIV3.PathsObject, method: string) => {
           const isUpdate = _.includes(['patch', 'post', 'delete'], method);
