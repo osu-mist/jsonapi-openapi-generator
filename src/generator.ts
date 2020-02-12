@@ -7,7 +7,7 @@ import 'source-map-support/register';
 
 import { init } from './init';
 import {
-  getResourceSchema,
+  getGetResourceSchema,
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
@@ -82,18 +82,36 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
+    // Id schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Id`,
+      { type: 'string', description: `Unique ID of ${resourceName} resource` },
+    );
+
+    // Type schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Type`,
+      { type: 'string', enum: [resourceName] },
+    );
+
+    // Attributes schema
     _.set(
       openapi,
       `components.schemas.${resourceSchemaPrefix}Attributes`,
-      {
-        type: 'object',
-        properties: resource.attributes,
-      },
+      { type: 'object', properties: resource.attributes },
     );
 
-    const resourceSchema = getResourceSchema(resource, resourceName);
+    // GetResource schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}GetResource`,
+      getGetResourceSchema(resource, resourceName),
+    );
+
+    // TODO: remove
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
-    _.set(openapi, `components.schemas.${resourceSchemaName}`, resourceSchema);
 
     const resultSchema = getResultSchema(resourceSchemaName);
     _.set(openapi, `components.schemas.${resourceSchemaPrefix}Result`, resultSchema);

@@ -5,13 +5,15 @@ import { Resource, Relationship } from './types';
 import { getResourceSchemaPrefix } from './utils';
 
 /**
- * Gets the resource schema object for a resource
+ * Gets the GetResource schema object for a resource
  *
  * @param resource
  * @param resourceName
- * @returns The resource schema
+ * @returns The GetResource schema
  */
-const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
+const getGetResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
+  const resourceSchemaPrefix = getResourceSchemaPrefix(resourceName);
+
   const getRelationship = (relationship: Relationship): OpenAPIV3.ReferenceObject => {
     let schemaName = _([resourceName, relationship.type]).map(getResourceSchemaPrefix).join('');
     schemaName = relationship.relationshipType === 'toOne'
@@ -22,23 +24,31 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
     };
   };
 
+  const attributeProperties = _(resource.attributes)
+    .pickBy((__, attributeName) => (
+      resource.getAttributes === 'all' || _.includes(resource.getAttributes, attributeName)
+    ))
+    .mapValues((__, attributeName) => ({
+      $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes/properties/${attributeName}`,
+    }))
+    .value();
+
   const resourceSchema: OpenAPIV3.SchemaObject = {
     type: 'object',
     properties: {
       id: {
-        type: 'string',
-        description: `Unique ID of ${resourceName} resource`,
+        $ref: `#/components/schemas/${resourceSchemaPrefix}Id`,
       },
       type: {
-        type: 'string',
-        enum: [resourceName],
+        $ref: `#/components/schemas/${resourceSchemaPrefix}Type`,
       },
       attributes: {
         type: 'object',
-        properties: resource.attributes,
+        properties: attributeProperties,
       },
     },
   };
+
   if (resource.relationships) {
     _.set(resourceSchema, 'properties.relationships', {
       type: 'object',
@@ -205,7 +215,7 @@ const getRequestBodySchema = (
 };
 
 export {
-  getResourceSchema,
+  getGetResourceSchema,
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
