@@ -70,8 +70,26 @@ const getOperationId = (operation: string, resourceName: string, resource: Resou
  * @returns The updated openapi object
  */
 const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.Document => {
+  // ignore 'required' property on attributes
   _.forEach(config.resources, (resource, resourceName) => {
+    _.forEach(resource.attributes, (attribute, attributeName) => {
+      if (_.has(attribute, 'required')) {
+        console.warn(`Ignoring property 'required' in '${resourceName}' attribute: '${attributeName}'`);
+        console.warn('Add this property to requiredPostAttributes instead');
+        _.unset(attribute, 'required');
+      }
+    });
+
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
+
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Attributes`,
+      {
+        type: 'object',
+        properties: resource.attributes,
+      },
+    );
 
     const resourceSchema = getResourceSchema(resource, resourceName);
     const resourceSchemaName = `${resourceSchemaPrefix}Resource`;

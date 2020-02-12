@@ -132,9 +132,15 @@ const getRequestBodySchema = (
   bodyType: 'post' | 'patch',
 ): OpenAPIV3.SchemaObject => {
   const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
-  const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
-    $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
-  }));
+  const attributeProperties = _(resource.attributes)
+    .pickBy((__, attributeName) => (
+      resource.postAttributes === 'all'
+      || _.includes(resource.postAttributes, attributeName)
+    ))
+    .mapValues((__, attributeName) => ({
+      $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
+    }))
+    .value();
   const allPropsRequired = resource.requiredPostAttributes === 'all';
   const allProperties = _.keys(resource.attributes);
   const requiredProperties = allPropsRequired ? allProperties : resource.requiredPostAttributes;
