@@ -75,6 +75,7 @@ const getResourceSchema = (
       type: 'object',
       ...(requiredAttributes),
       properties: attributeProperties,
+      additionalProperties: false,
     };
   }
 
@@ -88,6 +89,7 @@ const getResourceSchema = (
       ...(operation !== 'post' ? idProp : {}),
       attributes,
     },
+    additionalProperties: false,
   };
 
   if (resource.relationships) {
@@ -182,6 +184,7 @@ const getRequestBodySchema = (resourceSchemaName: string): OpenAPIV3.RequestBody
             $ref: `#/components/schemas/${resourceSchemaName}`,
           },
         },
+        additionalProperties: false,
       },
     },
   },

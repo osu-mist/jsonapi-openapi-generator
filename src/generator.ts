@@ -100,7 +100,7 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
     _.set(
       openapi,
       `components.schemas.${resourceSchemaPrefix}Attributes`,
-      { type: 'object', properties: resource.attributes },
+      { type: 'object', properties: resource.attributes, additionalProperties: false },
     );
 
     // GetResource schema
