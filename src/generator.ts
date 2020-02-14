@@ -7,7 +7,7 @@ import 'source-map-support/register';
 
 import { init } from './init';
 import {
-  getGetResourceSchema,
+  getResourceSchema,
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
@@ -107,34 +107,44 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
     _.set(
       openapi,
       `components.schemas.${resourceSchemaPrefix}GetResource`,
-      getGetResourceSchema(resource, resourceName),
+      getResourceSchema('get', resource, resourceName),
     );
 
-    // TODO: remove
-    const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
+    // POST schema
+    if (_.includes(resource.operations, 'post')) {
+      _.set(
+        openapi,
+        `components.schemas.${resourceSchemaPrefix}PostResource`,
+        getResourceSchema('post', resource, resourceName),
+      );
+      _.set(
+        openapi,
+        `components.requestBodies.${resourceSchemaPrefix}PostBody`,
+        getRequestBodySchema(`${resourceSchemaPrefix}PostResource`),
+      );
+    }
 
-    const resultSchema = getResultSchema(resourceSchemaName);
+    // PATCH schema
+    if (_.includes(resource.operations, 'patch')) {
+      _.set(
+        openapi,
+        `components.schemas.${resourceSchemaPrefix}PatchResource`,
+        getResourceSchema('patch', resource, resourceName),
+      );
+      _.set(
+        openapi,
+        `components.requestBodies.${resourceSchemaPrefix}PatchBody`,
+        getRequestBodySchema(`${resourceSchemaPrefix}PatchResource`),
+      );
+    }
+
+    const getResourceSchemaName = `${resourceSchemaPrefix}GetResource`;
+
+    const resultSchema = getResultSchema(getResourceSchemaName);
     _.set(openapi, `components.schemas.${resourceSchemaPrefix}Result`, resultSchema);
 
-    const setResultSchema = getSetResultSchema(resource, resourceSchemaName);
+    const setResultSchema = getSetResultSchema(resource, getResourceSchemaName);
     _.set(openapi, `components.schemas.${resourceSchemaPrefix}SetResult`, setResultSchema);
-
-    if (_.includes(resource.operations, 'post')) {
-      const postBodySchema = getRequestBodySchema(
-        resource,
-        resourceSchemaName,
-        'post',
-      );
-      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PostBody`, postBodySchema);
-    }
-    if (_.includes(resource.operations, 'patchById')) {
-      const patchBodySchema = getRequestBodySchema(
-        resource,
-        resourceSchemaName,
-        'patch',
-      );
-      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PatchBody`, patchBodySchema);
-    }
   });
   return openapi;
 };
@@ -273,14 +283,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
       const requestBodySchema = _.includes(['post', 'patch'], method) ? {
         requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
-              },
-            },
-          },
+          $ref: `#/components/requestBodies/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
         },
       } : {};
 
