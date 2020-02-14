@@ -9,7 +9,7 @@ import { getResourceSchemaPrefix } from './utils';
  *
  * @param resource
  * @param resourceName
- * @returns The GetResource schema
+ * @returns The resource schema
  */
 const getResourceSchema = (
   operation: 'get' | 'post' | 'patch',
