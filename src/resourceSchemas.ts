@@ -61,7 +61,7 @@ const getResourceSchema = (
   let requiredAttributes = {};
   if (operation === 'post') {
     const attributes = resource.requiredPostAttributes === 'all'
-      ? _.keys(resource.postAttributes)
+      ? resource.postAttributes
       : resource.requiredPostAttributes;
     requiredAttributes = {
       required: attributes,

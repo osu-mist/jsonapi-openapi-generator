@@ -110,7 +110,7 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       getResourceSchema('get', resource, resourceName),
     );
 
-    // POST schema
+    // PostResource schema
     if (_.includes(resource.operations, 'post')) {
       _.set(
         openapi,
@@ -124,8 +124,8 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
       );
     }
 
-    // PATCH schema
-    if (_.includes(resource.operations, 'patch')) {
+    // PatchResource schema
+    if (_.includes(resource.operations, 'patchById')) {
       _.set(
         openapi,
         `components.schemas.${resourceSchemaPrefix}PatchResource`,
