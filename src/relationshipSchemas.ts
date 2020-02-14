@@ -9,10 +9,10 @@ const getRelationshipSchema = (relationship: Relationship): OpenAPIV3.SchemaObje
     type: 'object',
     properties: {
       type: {
-        $ref: `#/components/schemas/${relationshipSchemaName}Resource/properties/type`,
+        $ref: `#/components/schemas/${relationshipSchemaName}Type`,
       },
       id: {
-        $ref: `#/components/schemas/${relationshipSchemaName}Resource/properties/id`,
+        $ref: `#/components/schemas/${relationshipSchemaName}Id`,
       },
     },
   };

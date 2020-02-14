@@ -33,15 +33,6 @@ const getResourceSchema = (
     };
   };
 
-  const attributeProperties = _(resource.attributes)
-    .pickBy((__, attributeName) => (
-      allowedAttributes === 'all' || _.includes(allowedAttributes, attributeName)
-    ))
-    .mapValues((__, attributeName) => ({
-      $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes/properties/${attributeName}`,
-    }))
-    .value();
-
   const idProp = {
     id: {
       $ref: `#/components/schemas/${resourceSchemaPrefix}Id`,
@@ -68,6 +59,25 @@ const getResourceSchema = (
     };
   }
 
+  let attributes: OpenAPIV3.SchemaObject | OpenAPIV3.ReferenceObject;
+  if (allowedAttributes === 'all') {
+    attributes = {
+      $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes`,
+    };
+  } else {
+    const attributeProperties = _(resource.attributes)
+      .pickBy((__, attributeName) => _.includes(allowedAttributes, attributeName))
+      .mapValues((__, attributeName) => ({
+        $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes/properties/${attributeName}`,
+      }))
+      .value();
+    attributes = {
+      type: 'object',
+      ...(requiredAttributes),
+      properties: attributeProperties,
+    };
+  }
+
   const resourceSchema: OpenAPIV3.SchemaObject = {
     type: 'object',
     ...(topLevelRequired),
@@ -76,11 +86,7 @@ const getResourceSchema = (
         $ref: `#/components/schemas/${resourceSchemaPrefix}Type`,
       },
       ...(operation !== 'post' ? idProp : {}),
-      attributes: {
-        type: 'object',
-        ...(requiredAttributes),
-        properties: attributeProperties,
-      },
+      attributes,
     },
   };
 
