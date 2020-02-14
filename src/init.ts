@@ -148,6 +148,12 @@ const init = (config: Config): OpenAPIV3.Document => {
       },
       parameters: extraParameters,
       responses: {
+        '204Delete': {
+          description: 'The resource was successfully deleted',
+        },
+        '204RelationshipUpdate': {
+          description: 'The relationship(s) already match the requested state',
+        },
         400: {
           description: 'Bad request',
           ...errorSchema,
@@ -175,7 +181,7 @@ const init = (config: Config): OpenAPIV3.Document => {
           properties: {
             self: {
               type: 'string',
-              format: 'url',
+              format: 'uri',
               description: 'Self-link of current resource',
             },
           },
@@ -208,7 +214,7 @@ const init = (config: Config): OpenAPIV3.Document => {
               properties: {
                 about: {
                   type: 'string',
-                  format: 'url',
+                  format: 'uri',
                   description: 'A link to further information about the error',
                   example: 'https://developer.oregonstate.edu/documentation/error-reference#1234',
                 },

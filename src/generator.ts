@@ -11,16 +11,22 @@ import {
   getResultSchema,
   getSetResultSchema,
   getRequestBodySchema,
-} from './schemas';
+} from './resourceSchemas';
+import {
+  getRelationshipSchema,
+  getRelationshipResultSchema,
+  getRelationshipSetResultSchema,
+} from './relationshipSchemas';
 import { Config, Resource } from './types';
+import { getResourceSchemaPrefix } from './utils';
 
-/**
- * Gets the prefix of the resource schema in components/schemas
- *
- * @param resourceName
- * @returns The prefix
- */
-const getResourceSchemaPrefix = (resourceName: string): string => _.capitalize(resourceName);
+let baseUrl: string;
+
+const isIdOperation = (operation: string): boolean => _.includes(
+  ['getById', 'patchById', 'deleteById'],
+  operation,
+);
+const idParamName = (resourceName: string): string => `${resourceName}Id`;
 
 /**
  * Gets the method for a given operation. Example: `getById` -> `get`
@@ -108,7 +114,7 @@ const getPath = (operation: string, plural: string): string => {
   if (_.includes(['get', 'post'], operation)) {
     return `/${plural}`;
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
+  if (isIdOperation(operation)) {
     return `/${plural}/{id}`;
   }
   throw Error(`Unexpected operation ${operation}`);
@@ -125,15 +131,13 @@ const getResponses = (
   operation: string,
   resourceSchemaPrefix: string,
 ): OpenAPIV3.ResponsesObject => {
-  const genericResponse = (code: string): OpenAPIV3.ReferenceObject => ({
-    $ref: `#/components/responses/${code}`,
+  const refResponse = (refName: string): OpenAPIV3.ReferenceObject => ({
+    $ref: `#/components/responses/${refName}`,
   });
 
   const responses: OpenAPIV3.ResponsesObject = {};
   if (operation === 'deleteById') {
-    responses['204'] = {
-      description: 'REPLACEME',
-    };
+    responses['204'] = refResponse('204Delete');
   } else {
     const schemaSuffix = _.includes(['post', 'patchById', 'getById'], operation)
       ? 'Result'
@@ -151,8 +155,8 @@ const getResponses = (
     };
   }
 
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
-    responses['404'] = genericResponse('404');
+  if (isIdOperation(operation)) {
+    responses['404'] = refResponse('404');
   }
 
   if (operation === 'post') {
@@ -165,7 +169,7 @@ const getResponses = (
     };
   }
 
-  responses['500'] = genericResponse('500');
+  responses['500'] = refResponse('500');
   return responses;
 };
 
@@ -173,10 +177,15 @@ const getResponses = (
  * Return parameters for an operation
  *
  * @param operation
+ * @param resourceName
  * @param paginate - Value of resource.paginate from config file
  * @returns The list of parameters
  */
-const getParameters = (operation: string, paginate: boolean): OpenAPI.Parameters => {
+const getParameters = (
+  operation: string,
+  resourceName: string,
+  paginate: boolean,
+): OpenAPI.Parameters => {
   const parameters: OpenAPI.Parameters = [];
   if (operation === 'get' && paginate) {
     parameters.push(
@@ -188,15 +197,9 @@ const getParameters = (operation: string, paginate: boolean): OpenAPI.Parameters
       },
     );
   }
-  if (_.includes(['getById', 'patchById', 'deleteById'], operation)) {
+  if (isIdOperation(operation)) {
     parameters.push({
-      name: 'id',
-      in: 'path',
-      description: 'REPLACEME',
-      required: true,
-      schema: {
-        type: 'string',
-      },
+      $ref: `#/components/parameters/${idParamName(resourceName)}`,
     });
   }
   return parameters;
@@ -213,30 +216,39 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
   _.forEach(config.resources, (resource, resourceName) => {
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
+    // Add id parameter to components.parameters if at least one endpoint uses it
+    if (_.some(resource.operations, (operation) => isIdOperation(operation))) {
+      _.set(openapi, `components.parameters.${idParamName(resourceName)}`, {
+        name: 'id',
+        in: 'path',
+        description: 'REPLACEME',
+        required: true,
+        schema: {
+          type: 'string',
+        },
+      });
+    }
+
     _.forEach(resource.operations, (operation) => {
       const method = getOperationMethod(operation);
       const path = getPath(operation, resource.plural);
-      const parameters = getParameters(operation, resource.paginate);
-      const parametersSchema = !_.isEmpty(parameters) ? {
-        parameters: getParameters(operation, resource.paginate),
-      } : {};
+      const parameters = getParameters(operation, resourceName, resource.paginate);
+      const parametersSchema = !_.isEmpty(parameters) ? { parameters } : {};
 
-      let requestBodySchema = {};
-      if (_.includes(['post', 'patch'], method)) {
-        requestBodySchema = {
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
-                },
+      const requestBodySchema = _.includes(['post', 'patch'], method) ? {
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
               },
             },
           },
-        };
-      }
+        },
+      } : {};
 
+      // add resource endpoints
       _.set(openapi.paths, [path, method], {
         summary: 'REPLACEME',
         tags: [
@@ -248,6 +260,133 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
         ...requestBodySchema,
         responses: getResponses(operation, resourceSchemaPrefix),
       });
+    });
+
+    // add relationship endpoints
+    _.forEach(resource.relationships, (relationship, relationshipName) => {
+      const path = `${getPath('getById', resource.plural)}/relationships/${relationshipName}`;
+      const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationship.type)}Relationship`;
+      const isToMany = relationship.relationshipType === 'toMany';
+      const relationshipSchemaName = isToMany ? `${relationshipSchemaPrefix}Set` : relationshipSchemaPrefix;
+      const relationshipResponseSchemaName = `${relationshipSchemaName}Result`;
+
+      const relationshipSchema = getRelationshipSchema(relationship);
+      if (!_.has(openapi, `components.schemas.${relationshipSchemaPrefix}`)) {
+        _.set(openapi, `components.schemas.${relationshipSchemaPrefix}`, relationshipSchema);
+      }
+
+      const getResponseSchema = isToMany
+        ? getRelationshipSetResultSchema
+        : getRelationshipResultSchema;
+      const responseSchema = getResponseSchema(
+        resource,
+        relationshipName,
+        baseUrl,
+        relationshipSchemaPrefix,
+      );
+
+      _.set(openapi, `components.schemas.${relationshipResponseSchemaName}`, responseSchema);
+
+      _.set(openapi, `components.responses.${relationshipSchemaName}`, {
+        description: 'README',
+        content: {
+          'application/json': {
+            schema: {
+              $ref: `#/components/schemas/${relationshipResponseSchemaName}`,
+            },
+          },
+        },
+      });
+
+      const relationshipSchemaRef = {
+        $ref: `#/components/schemas/${relationshipSchemaPrefix}`,
+      };
+      const arrayData = {
+        type: 'array',
+        items: relationshipSchemaRef,
+      };
+      const singleData = {
+        type: 'object',
+        allOf: [
+          {
+            nullable: true,
+          },
+          relationshipSchemaRef,
+        ],
+      };
+      const relationshipRequestBody = {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: [
+                'data',
+              ],
+              properties: {
+                data: isToMany ? arrayData : singleData,
+              },
+            },
+          },
+        },
+      };
+
+      _.set(openapi, `components.requestBodies.${relationshipSchemaName}`, relationshipRequestBody);
+
+      const pathsObject = _.reduce(
+        /*
+         * this array should be ['get', 'patch'] if the relationship is toOne and
+         * ['get', 'patch', 'post', 'delete'] if the relationship is toMany
+         */
+        ['get', 'patch', ...(isToMany ? ['post', 'delete'] : [])],
+        (result: OpenAPIV3.PathsObject, method: string) => {
+          const isUpdate = _.includes(['patch', 'post', 'delete'], method);
+
+          const operationObject: OpenAPIV3.OperationObject = {
+            description: 'REPLACEME',
+            tags: [
+              resource.plural,
+              _.get(
+                config,
+                `resources.${relationship.type}.plural`,
+                `<plural of ${relationship.type}>`,
+              ),
+            ],
+            parameters: [
+              {
+                $ref: `#/components/parameters/${idParamName(resourceName)}`,
+              },
+            ],
+          };
+
+          if (isUpdate) {
+            operationObject.requestBody = {
+              $ref: `#/components/requestBodies/${relationshipSchemaName}`,
+            };
+          }
+
+          operationObject.responses = {
+            200: {
+              $ref: `#/components/responses/${relationshipSchemaName}`,
+            },
+            ...(isUpdate ? {
+              204: {
+                $ref: '#/components/responses/204RelationshipUpdate',
+              },
+            } : {}),
+            404: {
+              $ref: '#/components/responses/404',
+            },
+            500: {
+              $ref: '#/components/responses/500',
+            },
+          };
+
+          result[method] = operationObject;
+          return result;
+        },
+        {},
+      );
+      openapi.paths[path] = pathsObject;
     });
   });
   return openapi;
@@ -269,6 +408,7 @@ const main = async (): Promise<void> => {
     const config = await loadConfig();
     // TODO handle existing openapi document and avoid overwriting
     let openapi: OpenAPIV3.Document = init(config);
+    baseUrl = _.get(openapi, 'servers[0].url');
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');

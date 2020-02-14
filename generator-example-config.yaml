@@ -37,18 +37,19 @@ resources:
         type: number
         format: float
         maximum: 999
-    # type/id and links can be generated if related resources are in the same document. Otherwise,
-    # we may want to just generate some placeholders. Default: {}
+    # Relationships for a resource. Default: {}
     relationships:
       owner:
-        # If related resource is in the same document. Verify that this resource exists if true.
-        # Default: true
-        local: true
+        # Type of the related resource
+        type: owner
         # Either 'toOne' or 'toMany'
         relationshipType: toOne
       siblings:
-        local: false
+        type: pet
         relationshipType: toMany
+      favoriteColor:
+        type: color
+        relationshipType: toOne
     # sub-resources. Example: '/pets/{id}/previousOwners' and '/pets/{id}/firstOwner'. Default: {}
     subResources:
       # key name will be used as sub-resource path to ensure uniqueness

@@ -1,7 +1,8 @@
 import _ from 'lodash';
 import { OpenAPIV3 } from 'openapi-types';
 
-import { Resource } from './types';
+import { Resource, Relationship } from './types';
+import { getResourceSchemaPrefix } from './utils';
 
 /**
  * Gets the resource schema object for a resource
@@ -11,6 +12,16 @@ import { Resource } from './types';
  * @returns The resource schema
  */
 const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
+  const getRelationship = (relationship: Relationship): OpenAPIV3.ReferenceObject => {
+    let schemaName = _([resourceName, relationship.type]).map(getResourceSchemaPrefix).join('');
+    schemaName = relationship.relationshipType === 'toOne'
+      ? `${schemaName}RelationshipResult`
+      : `${schemaName}RelationshipSetResult`;
+    return {
+      $ref: `#/components/schemas/${schemaName}`,
+    };
+  };
+
   const resourceSchema: OpenAPIV3.SchemaObject = {
     type: 'object',
     properties: {
@@ -28,6 +39,12 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
       },
     },
   };
+  if (resource.relationships) {
+    _.set(resourceSchema, 'properties.relationships', {
+      type: 'object',
+      properties: _.mapValues(resource.relationships, getRelationship),
+    });
+  }
   if (resource.selfLinks) {
     _.set(resourceSchema, 'properties.links', {
       $ref: '#/components/schemas/SelfLink',
@@ -65,8 +82,9 @@ const getSetResultSchema = (
   resource: Resource,
   resourceSchemaName: string,
 ): OpenAPIV3.SchemaObject => {
-  const linksSchema: object = resource.paginate ? {
+  const paginateProps: OpenAPIV3.SchemaObject['properties'] = {
     links: {
+      type: 'object',
       allOf: [
         {
           $ref: '#/components/schemas/SelfLink',
@@ -79,15 +97,17 @@ const getSetResultSchema = (
     meta: {
       $ref: '#/components/schemas/Meta',
     },
-  } : {
+  };
+  const noPaginateProps = {
     links: {
       $ref: '#/components/schemas/SelfLink',
     },
   };
-  const setResultSchema: OpenAPIV3.SchemaObject = {
+
+  return {
     type: 'object',
     properties: {
-      ...linksSchema,
+      ...(resource.paginate ? paginateProps : noPaginateProps),
       data: {
         type: 'array',
         items: {
@@ -96,7 +116,6 @@ const getSetResultSchema = (
       },
     },
   };
-  return setResultSchema;
 };
 
 /**
