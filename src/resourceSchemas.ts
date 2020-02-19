@@ -5,13 +5,24 @@ import { Resource, Relationship } from './types';
 import { getResourceSchemaPrefix } from './utils';
 
 /**
- * Gets the resource schema object for a resource
+ * Gets the schema object for a resource
  *
  * @param resource
  * @param resourceName
  * @returns The resource schema
  */
-const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.SchemaObject => {
+const getResourceSchema = (
+  operation: 'get' | 'post' | 'patch',
+  resource: Resource,
+  resourceName: string,
+): OpenAPIV3.SchemaObject => {
+  const resourceSchemaPrefix = getResourceSchemaPrefix(resourceName);
+  const allowedAttributes = {
+    get: resource.getAttributes,
+    post: resource.postAttributes,
+    patch: resource.patchAttributes,
+  }[operation];
+
   const getRelationship = (relationship: Relationship): OpenAPIV3.ReferenceObject => {
     let schemaName = _([resourceName, relationship.type]).map(getResourceSchemaPrefix).join('');
     schemaName = relationship.relationshipType === 'toOne'
@@ -22,30 +33,72 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
     };
   };
 
-  const resourceSchema: OpenAPIV3.SchemaObject = {
-    type: 'object',
-    properties: {
-      id: {
-        type: 'string',
-        description: `Unique ID of ${resourceName} resource`,
-      },
-      type: {
-        type: 'string',
-        enum: [resourceName],
-      },
-      attributes: {
-        type: 'object',
-        properties: resource.attributes,
-      },
+  const idProp = {
+    id: {
+      $ref: `#/components/schemas/${resourceSchemaPrefix}Id`,
     },
   };
+
+  let topLevelRequired = {};
+  if (operation === 'post') {
+    topLevelRequired = {
+      required: ['type', 'attributes'],
+    };
+  } else if (operation === 'patch') {
+    topLevelRequired = {
+      required: ['type', 'id'],
+    };
+  }
+  let requiredAttributes = {};
+  if (operation === 'post') {
+    const attributes = resource.requiredPostAttributes === 'all'
+      ? resource.postAttributes
+      : resource.requiredPostAttributes;
+    requiredAttributes = {
+      required: attributes,
+    };
+  }
+
+  let attributes: OpenAPIV3.SchemaObject | OpenAPIV3.ReferenceObject;
+  if (allowedAttributes === 'all') {
+    attributes = {
+      $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes`,
+    };
+  } else {
+    const attributeProperties = _(resource.attributes)
+      .pickBy((__, attributeName) => _.includes(allowedAttributes, attributeName))
+      .mapValues((__, attributeName) => ({
+        $ref: `#/components/schemas/${resourceSchemaPrefix}Attributes/properties/${attributeName}`,
+      }))
+      .value();
+    attributes = {
+      type: 'object',
+      ...(requiredAttributes),
+      properties: attributeProperties,
+      additionalProperties: false,
+    };
+  }
+
+  const resourceSchema: OpenAPIV3.SchemaObject = {
+    type: 'object',
+    ...(topLevelRequired),
+    properties: {
+      type: {
+        $ref: `#/components/schemas/${resourceSchemaPrefix}Type`,
+      },
+      ...(operation !== 'post' ? idProp : {}),
+      attributes,
+    },
+    additionalProperties: false,
+  };
+
   if (resource.relationships) {
     _.set(resourceSchema, 'properties.relationships', {
       type: 'object',
       properties: _.mapValues(resource.relationships, getRelationship),
     });
   }
-  if (resource.selfLinks) {
+  if (operation === 'get' && resource.selfLinks) {
     _.set(resourceSchema, 'properties.links', {
       $ref: '#/components/schemas/SelfLink',
     });
@@ -56,17 +109,17 @@ const getResourceSchema = (resource: Resource, resourceName: string): OpenAPIV3.
 /**
  * Gets the result schema object for a resource
  *
- * @param resourceSchemaName
+ * @param getResourceSchemaName
  * @returns The result schema
  */
-const getResultSchema = (resourceSchemaName: string): OpenAPIV3.SchemaObject => ({
+const getResultSchema = (getResourceSchemaName: string): OpenAPIV3.SchemaObject => ({
   type: 'object',
   properties: {
     links: {
       $ref: '#/components/schemas/SelfLink',
     },
     data: {
-      $ref: `#/components/schemas/${resourceSchemaName}`,
+      $ref: `#/components/schemas/${getResourceSchemaName}`,
     },
   },
 });
@@ -80,7 +133,7 @@ const getResultSchema = (resourceSchemaName: string): OpenAPIV3.SchemaObject => 
  */
 const getSetResultSchema = (
   resource: Resource,
-  resourceSchemaName: string,
+  getResourceSchemaName: string,
 ): OpenAPIV3.SchemaObject => {
   const paginateProps: OpenAPIV3.SchemaObject['properties'] = {
     links: {
@@ -111,92 +164,31 @@ const getSetResultSchema = (
       data: {
         type: 'array',
         items: {
-          $ref: `#/components/schemas/${resourceSchemaName}`,
+          $ref: `#/components/schemas/${getResourceSchemaName}`,
         },
       },
     },
   };
 };
 
-/**
- * Gets the requestBody schema object for a resource
- *
- * @param resource
- * @param resourceSchemaName
- * @param bodyType - 'post' for post body and 'patch' for patch body
- * @returns The requestBody schema
- */
-const getRequestBodySchema = (
-  resource: Resource,
-  resourceSchemaName: string,
-  bodyType: 'post' | 'patch',
-): OpenAPIV3.SchemaObject => {
-  const refPropertiesPrefix = `#/components/schemas/${resourceSchemaName}/properties`;
-  const attributeProperties = _.mapValues(resource.attributes, (_attribute, attributeName) => ({
-    $ref: `${refPropertiesPrefix}/attributes/properties/${attributeName}`,
-  }));
-  const allPropsRequired = resource.requiredPostAttributes === 'all';
-  const allProperties = _.keys(resource.attributes);
-  const requiredProperties = allPropsRequired ? allProperties : resource.requiredPostAttributes;
-
-  let attributes = {};
-  let required = {};
-  switch (bodyType) {
-    case 'post':
-      attributes = {
-        attributes: {
-          type: 'object',
-          properties: attributeProperties,
-          required: requiredProperties,
-          additionalProperties: false,
-        },
-      };
-      required = {
-        required: [
-          'type',
-          'attributes',
-        ],
-      };
-      break;
-    case 'patch':
-      attributes = {
-        attributes: {
-          type: 'object',
-          properties: attributeProperties,
-        },
-      };
-      required = {
-        required: [
-          'type',
-          'id',
-        ],
-      };
-      break;
-    default:
-      throw Error(`Invalid bodyType ${bodyType}`);
-  }
-
-  const requestBodySchema: OpenAPIV3.SchemaObject = {
-    type: 'object',
-    properties: {
-      data: {
+const getRequestBodySchema = (resourceSchemaName: string): OpenAPIV3.RequestBodyObject => ({
+  description: 'REPLACEME',
+  required: true,
+  content: {
+    'application/json': {
+      schema: {
         type: 'object',
+        required: ['data'],
         properties: {
-          type: {
-            $ref: `${refPropertiesPrefix}/type`,
+          data: {
+            $ref: `#/components/schemas/${resourceSchemaName}`,
           },
-          ...attributes,
         },
-        ...required,
+        additionalProperties: false,
       },
     },
-    required: [
-      'data',
-    ],
-    additionalProperties: false,
-  };
-  return requestBodySchema;
-};
+  },
+});
 
 export {
   getResourceSchema,

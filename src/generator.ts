@@ -70,35 +70,71 @@ const getOperationId = (operation: string, resourceName: string, resource: Resou
  * @returns The updated openapi object
  */
 const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.Document => {
+  // ignore 'required' property on attributes
   _.forEach(config.resources, (resource, resourceName) => {
+    _.forEach(resource.attributes, (attribute, attributeName) => {
+      if (_.has(attribute, 'required')) {
+        console.warn(`Ignoring property 'required' in '${resourceName}' attribute: '${attributeName}'`);
+        console.warn('Add this property to requiredPostAttributes instead');
+        _.unset(attribute, 'required');
+      }
+    });
+
     const resourceSchemaPrefix: string = getResourceSchemaPrefix(resourceName);
 
-    const resourceSchema = getResourceSchema(resource, resourceName);
-    const resourceSchemaName = `${resourceSchemaPrefix}Resource`;
-    _.set(openapi, `components.schemas.${resourceSchemaName}`, resourceSchema);
+    // Id schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Id`,
+      { type: 'string', description: `Unique ID of ${resourceName} resource` },
+    );
 
-    const resultSchema = getResultSchema(resourceSchemaName);
+    // Type schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Type`,
+      { type: 'string', enum: [resourceName] },
+    );
+
+    // Attributes schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}Attributes`,
+      { type: 'object', properties: resource.attributes, additionalProperties: false },
+    );
+
+    // GetResource schema
+    _.set(
+      openapi,
+      `components.schemas.${resourceSchemaPrefix}GetResource`,
+      getResourceSchema('get', resource, resourceName),
+    );
+
+    // PostResource and PatchResource schemas
+    _.forEach(['post', 'patch'] as Array<'post' | 'patch'>, (method) => {
+      const operation = { post: 'post', patch: 'patchById' }[method];
+      const capital = _.capitalize(method);
+      if (_.includes(resource.operations, operation)) {
+        _.set(
+          openapi,
+          `components.schemas.${resourceSchemaPrefix}${capital}Resource`,
+          getResourceSchema(method, resource, resourceName),
+        );
+        _.set(
+          openapi,
+          `components.requestBodies.${resourceSchemaPrefix}${capital}Body`,
+          getRequestBodySchema(`${resourceSchemaPrefix}${capital}Resource`),
+        );
+      }
+    });
+
+    const getResourceSchemaName = `${resourceSchemaPrefix}GetResource`;
+
+    const resultSchema = getResultSchema(getResourceSchemaName);
     _.set(openapi, `components.schemas.${resourceSchemaPrefix}Result`, resultSchema);
 
-    const setResultSchema = getSetResultSchema(resource, resourceSchemaName);
+    const setResultSchema = getSetResultSchema(resource, getResourceSchemaName);
     _.set(openapi, `components.schemas.${resourceSchemaPrefix}SetResult`, setResultSchema);
-
-    if (_.includes(resource.operations, 'post')) {
-      const postBodySchema = getRequestBodySchema(
-        resource,
-        resourceSchemaName,
-        'post',
-      );
-      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PostBody`, postBodySchema);
-    }
-    if (_.includes(resource.operations, 'patchById')) {
-      const patchBodySchema = getRequestBodySchema(
-        resource,
-        resourceSchemaName,
-        'patch',
-      );
-      _.set(openapi, `components.schemas.${resourceSchemaPrefix}PatchBody`, patchBodySchema);
-    }
   });
   return openapi;
 };
@@ -237,14 +273,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
       const requestBodySchema = _.includes(['post', 'patch'], method) ? {
         requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                $ref: `#/components/schemas/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
-              },
-            },
-          },
+          $ref: `#/components/requestBodies/${resourceSchemaPrefix}${_.capitalize(method)}Body`,
         },
       } : {};
 

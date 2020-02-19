@@ -147,6 +147,7 @@ const init = (config: Config): OpenAPIV3.Document => {
         },
       },
       parameters: extraParameters,
+      requestBodies: {},
       responses: {
         '204Delete': {
           description: 'The resource was successfully deleted',

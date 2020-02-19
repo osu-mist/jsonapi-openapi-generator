@@ -24,6 +24,9 @@ export interface Resource {
   compoundDocuments: boolean;
   sparseFieldsets: boolean;
   operations: Array<OperationType>;
+  getAttributes: 'all' | Array<string>;
+  postAttributes: 'all' | Array<string>;
+  patchAttributes: 'all' | Array<string>;
   requiredPostAttributes: 'all' | Array<string>;
   attributes: { [key: string]: OpenAPIV3.SchemaObject };
   relationships: { [key: string]: Relationship };

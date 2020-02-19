@@ -23,6 +23,15 @@ resources:
       - post
       - patchById
       - deleteById
+    # Specify the attributes that appear in the get/getById responses and the attributes allowed in
+    # the post/patch bodies. Should either be 'all' or an array. Default: 'all'.
+    # TODO: If we have attributes that are objects and we only want to allow some properties of
+    # those objects, maybe we could specify 'attributeName.propName'
+    getAttributes: all
+    postAttributes:
+      - name
+      - species
+    patchAttributes: all
     # Should either be 'all' or an array. If it's an array, we should verify that all items exist in
     # attributes. Either ignore/warn/error if resource doesn't have a post endpoint. Default: 'all'
     requiredPostAttributes: all
