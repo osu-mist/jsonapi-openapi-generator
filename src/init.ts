@@ -164,7 +164,7 @@ const init = (config: Config): OpenAPIV3.Document => {
           ...errorSchema,
         },
         '409Post': {
-          description: "The request body resource object's type was invalid or, if a client-generated ID was used, a resource already exists with this id",
+          description: "The request body resource object's type was invalid or, if a client-generated ID was used, a resource already exists with this ID",
           ...errorSchema,
         },
         '409Patch': {
