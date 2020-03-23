@@ -146,12 +146,12 @@ const buildResources = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
  * @param plural - The value of resource.plural from the config file
  * @returns The path for the operation
  */
-const getPath = (operation: string, plural: string): string => {
+const getPath = (operation: string, plural: string, resourceName: string): string => {
   if (_.includes(['get', 'post'], operation)) {
     return `/${plural}`;
   }
   if (isIdOperation(operation)) {
-    return `/${plural}/{id}`;
+    return `/${plural}/{${idParamName(resourceName)}}`;
   }
   throw Error(`Unexpected operation ${operation}`);
 };
@@ -255,7 +255,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
     // Add id parameter to components.parameters if at least one endpoint uses it
     if (_.some(resource.operations, (operation) => isIdOperation(operation))) {
       _.set(openapi, `components.parameters.${idParamName(resourceName)}`, {
-        name: 'id',
+        name: idParamName(resourceName),
         in: 'path',
         description: 'REPLACEME',
         required: true,
@@ -267,7 +267,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
     _.forEach(resource.operations, (operation) => {
       const method = getOperationMethod(operation);
-      const path = getPath(operation, resource.plural);
+      const path = getPath(operation, resource.plural, resourceName);
       const parameters = getParameters(operation, resourceName, resource.paginate);
       const parametersSchema = !_.isEmpty(parameters) ? { parameters } : {};
 
@@ -293,7 +293,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 
     // add relationship endpoints
     _.forEach(resource.relationships, (relationship, relationshipName) => {
-      const path = `${getPath('getById', resource.plural)}/relationships/${relationshipName}`;
+      const path = `${getPath('getById', resource.plural, resourceName)}/relationships/${relationshipName}`;
       const relationshipSchemaPrefix = `${resourceSchemaPrefix}${getResourceSchemaPrefix(relationship.type)}Relationship`;
       const isToMany = relationship.relationshipType === 'toMany';
       const relationshipSchemaName = isToMany ? `${relationshipSchemaPrefix}Set` : relationshipSchemaPrefix;
@@ -377,7 +377,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
               _.get(
                 config,
                 `resources.${relationship.type}.plural`,
-                `<plural of ${relationship.type}>`,
+                `[plural of ${relationship.type}]`,
               ),
             ],
             parameters: [
