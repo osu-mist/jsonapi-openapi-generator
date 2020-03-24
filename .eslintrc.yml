@@ -8,6 +8,13 @@ extends:
   - plugin:import/typescript
 rules:
   no-param-reassign: "off"
+  import/extensions:
+    - error
+    - ignorePackages
+    - js: never
+      mjs: never
+      jsx: never
+      ts: never
   import/prefer-default-export: 'off'
   import/no-default-export:
     - error
