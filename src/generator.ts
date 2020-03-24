@@ -1,9 +1,12 @@
 import { promises as fsPromises } from 'fs';
+import { resolve } from 'path';
 
+import Ajv from 'ajv';
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import { OpenAPI, OpenAPIV3 } from 'openapi-types';
 import 'source-map-support/register';
+import * as TJS from 'typescript-json-schema';
 
 import { init } from './init';
 import {
@@ -424,7 +427,32 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
 const loadConfig = async (): Promise<Config> => {
   const configFile = await fsPromises.open('generator-config.yaml', 'r');
   const config: Config = yaml.safeLoad(await configFile.readFile('utf8'));
-  // TODO Assign default values, check schema at runtime
+
+  // Make all fields required, disallow optional properties.
+  const settings: TJS.PartialArgs = {
+    required: true,
+    noExtraProps: true,
+  };
+  const program = TJS.getProgramFromFiles([resolve('src/types.ts')]);
+  const schema = TJS.generateSchema(program, 'Config', settings);
+
+  // Inject default values for any missing values
+  const ajv = new Ajv({
+    useDefaults: true,
+  });
+  const valid = ajv.validate(schema || '', config);
+  if (!valid) {
+    console.error(`Invalid config file: ${JSON.stringify(ajv.errors, null, 2)}`);
+    process.exit(1);
+  }
+
+  // Set default values for 'plural' prop
+  _.forEach(config.resources, (resource, resourceName) => {
+    if (resource.plural === '') {
+      resource.plural = `${resourceName}s`;
+    }
+  });
+
   return config;
 };
 
