@@ -243,6 +243,8 @@ const getParameters = (
         schema: {},
         required: false,
       };
+
+      // use 'type' and 'format' from attribute with same name if it exists
       const paramType = _.get(attributes, [paramName, 'type']);
       if (paramType) {
         _.set(paramFields, 'schema.type', paramType);
