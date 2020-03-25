@@ -223,18 +223,42 @@ const getResponses = (
 const getParameters = (
   operation: string,
   resourceName: string,
-  paginate: boolean,
+  { paginate, filterParams, attributes }: Resource,
 ): OpenAPI.Parameters => {
-  const parameters: OpenAPI.Parameters = [];
-  if (operation === 'get' && paginate) {
-    parameters.push(
-      {
-        $ref: '#/components/parameters/pageNumber',
-      },
-      {
-        $ref: '#/components/parameters/pageSize',
-      },
-    );
+  const parameters = [];
+  if (operation === 'get') {
+    if (paginate) {
+      parameters.push(
+        {
+          $ref: '#/components/parameters/pageNumber',
+        },
+        {
+          $ref: '#/components/parameters/pageSize',
+        },
+      );
+    }
+    _.forEach(filterParams, (operators, paramName) => {
+      const paramFields = {
+        in: 'query',
+        schema: {},
+        required: false,
+      };
+      const paramType = _.get(attributes, [paramName, 'type']);
+      if (paramType) {
+        _.set(paramFields, 'schema.type', paramType);
+      }
+      const paramFormat = _.get(attributes, [paramName, 'format']);
+      if (paramFormat) {
+        _.set(paramFields, 'schema.format', paramFormat);
+      }
+      _.forEach(operators, (operator) => {
+        const operatorSuffix = operator === 'eq' ? '' : `[${operator}]`;
+        parameters.push({
+          name: `filter[${paramName}]${operatorSuffix}`,
+          ...paramFields,
+        });
+      });
+    });
   }
   if (isIdOperation(operation)) {
     parameters.push({
@@ -271,7 +295,7 @@ const buildEndpoints = (config: Config, openapi: OpenAPIV3.Document): OpenAPIV3.
     _.forEach(resource.operations, (operation) => {
       const method = getOperationMethod(operation);
       const path = getPath(operation, resource.plural, resourceName);
-      const parameters = getParameters(operation, resourceName, resource.paginate);
+      const parameters = getParameters(operation, resourceName, resource);
       const parametersSchema = !_.isEmpty(parameters) ? { parameters } : {};
 
       const requestBodySchema = _.includes(['post', 'patch'], method) ? {
@@ -469,7 +493,7 @@ const main = async (): Promise<void> => {
     openapi = buildResources(config, openapi);
     openapi = buildEndpoints(config, openapi);
     const openapiFile = await fsPromises.open('openapi.yaml', 'w');
-    await openapiFile.write(yaml.safeDump(openapi, { lineWidth: 100 }));
+    await openapiFile.write(yaml.safeDump(openapi, { noRefs: true, lineWidth: 100 }));
   } catch (err) {
     console.error(err);
     process.exit(1);
