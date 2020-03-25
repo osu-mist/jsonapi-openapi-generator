@@ -23,6 +23,15 @@ resources:
       - post
       - patchById
       - deleteById
+    # Filter query parameters for the get endpoint
+    filterParams:
+      # Array of operators. Possible values are 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'oneOf',
+      # 'noneOf', 'hasSome', 'hasAll', 'hasNone', 'fuzzy'
+      species:
+        - eq
+      yearsOwned:
+        - gte
+        - lte
     # Specify the attributes that appear in the get/getById responses and the attributes allowed in
     # the post/patch bodies. Should either be 'all' or an array. Default: 'all'.
     # TODO: If we have attributes that are objects and we only want to allow some properties of

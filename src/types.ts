@@ -7,6 +7,20 @@ type OperationType =
   | 'patchById'
   | 'deleteById';
 
+type FilterParamType =
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'oneOf'
+  | 'noneOf'
+  | 'hasSome'
+  | 'hasAll'
+  | 'hasNone'
+  | 'fuzzy';
+
 export interface Relationship {
   relationshipType: 'toOne' | 'toMany';
   type: string;
@@ -42,6 +56,10 @@ export interface Resource {
    * @default []
    */
   operations: Array<OperationType>;
+  /**
+   * @default {}
+   */
+  filterParams: { [key: string]: Array<FilterParamType> };
   /**
    * @default "all"
    */
